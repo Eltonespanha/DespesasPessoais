@@ -2,8 +2,8 @@
 <html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Despesas Pessoais - Mobile App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Gestão de Despesas e Investimentos</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -14,13 +14,15 @@
         extend: {
           colors: {
             brand: {
-              dark: '#0f172a',
-              card: '#1e293b',
-              border: '#334155',
+              bg: '#090d16',
+              card: '#131c2e',
+              border: '#233048',
               emerald: '#10b981',
               rose: '#f43f5e',
               purple: '#8b5cf6',
-              amber: '#f59e0b'
+              amber: '#f59e0b',
+              blue: '#3b82f6',
+              cyan: '#06b6d4'
             }
           },
           fontFamily: {
@@ -34,7 +36,7 @@
   <!-- Google Font Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,7 +45,20 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* Custom scrollbar hiding for swipe container */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    
+    body {
+      touch-action: manipulation;
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Scrollbars */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -51,201 +66,246 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    
-    /* Touch actions & smooth scrolling */
-    body {
-      touch-action: manipulation;
-      background-color: #0b0f19;
-      color: #f8fafc;
-      font-family: 'Inter', sans-serif;
-      overflow: hidden;
-    }
 
-    /* Active nav bounce indicator */
-    .nav-active {
-      color: #10b981 !important;
-      transform: translateY(-2px);
-      transition: all 0.2s ease;
-    }
-
-    /* Custom Glassmorphism */
+    /* Glassmorphism Cards */
     .glass-card {
-      background: rgba(30, 41, 59, 0.75);
-      backdrop-filter: blur(12px);
+      background: rgba(19, 28, 46, 0.85);
+      backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .glass-card-accent {
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-      border: 1px solid rgba(16, 185, 129, 0.2);
+    .glass-card-hero {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(19, 28, 46, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .glass-card-invest {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(19, 28, 46, 0.95) 100%);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    /* Active Navigation Highlight */
+    .nav-btn.nav-active {
+      color: #10b981;
+      transform: translateY(-2px);
+    }
+    .nav-btn.nav-active i {
+      filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.5));
     }
   </style>
 </head>
-<body class="h-screen w-screen flex flex-col justify-between select-none">
+<body class="h-screen w-screen flex flex-col justify-between overflow-hidden">
 
-  <!-- TOP HEADER -->
-  <header class="w-full bg-slate-900/90 backdrop-blur-md px-5 py-3 border-b border-slate-800 flex justify-between items-center z-30 shrink-0">
-    <div class="flex items-center gap-2">
-      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
-        <i class="fa-solid font-bold fa-wallet text-sm"></i>
+  <!-- HEADER FIXO COM NAVEGAÇÃO DE MÊS -->
+  <header class="w-full bg-slate-900/95 backdrop-blur-md px-3 py-2.5 border-b border-slate-800/80 flex justify-between items-center z-30 shrink-0">
+    <!-- Seletor de Mês (< Mês/Ano >) -->
+    <div class="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-2xl border border-slate-800">
+      <button id="prev-month-btn" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs active:scale-95 transition">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      
+      <div id="month-label-container" class="px-2 text-center min-w-[110px]">
+        <span id="current-month-label" class="text-xs font-bold text-white block capitalize leading-tight">Carregando...</span>
+        <span id="month-status-badge" class="text-[9px] text-emerald-400 font-semibold block">Mês Ativo</span>
       </div>
-      <div>
-        <h1 class="font-bold text-sm leading-tight text-white tracking-wide">Despesas Pessoais</h1>
-        <p class="text-[10px] text-slate-400 font-medium">Controle Financeiro</p>
-      </div>
+
+      <button id="next-month-btn" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs active:scale-95 transition">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
     </div>
-    
-    <!-- Sync Status Badge -->
-    <div id="sync-status" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span id="sync-text">Sincronizado</span>
+
+    <!-- Status do Banco / Botão Mês Atual -->
+    <div class="flex items-center gap-2">
+      <button id="today-month-btn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 active:scale-95 transition flex items-center gap-1">
+        <i class="fa-solid fa-calendar-day text-emerald-400"></i>
+        <span>Mês Atual</span>
+      </button>
+
+      <div id="sync-status" class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="sync-text">Pronto</span>
+      </div>
     </div>
   </header>
 
-  <!-- SWIPE CONTAINER (MAIN CONTENT) -->
+  <!-- SLIDER HORIZONTAL DE PÁGINAS (5 PÁGINAS) -->
   <main id="pages-container" class="w-full flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar z-10">
-    
+
     <!-- ========================================== -->
-    <!-- PÁGINA 1: REGISTRAR GASTO & PAINEL         -->
+    <!-- PÁGINA 1: GASTAR                           -->
     <!-- ========================================== -->
     <section id="page-1" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       
-      <!-- CARD RESUMO FINANCEIRO -->
-      <div class="glass-card-accent rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-        <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl"></div>
-        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Saldo Remanescente</p>
-        <h2 id="saldo-total" class="text-3xl font-extrabold tracking-tight text-white mb-4">R$ 0,00</h2>
+      <!-- CARD HERO DE BALANÇO MENSAL -->
+      <div class="glass-card-hero rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
         
-        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs">
-              <i class="fa-solid fa-arrow-down-left"></i>
+        <div class="flex justify-between items-start mb-1">
+          <div>
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Saldo Disponível</span>
+            <h2 id="p1-saldo" class="text-3xl font-black text-white mt-0.5 tracking-tight">R$ 0,00</h2>
+          </div>
+          <span id="p1-month-pill" class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-1 rounded-xl border border-emerald-500/30">
+            ---
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50 mt-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-arrow-down"></i>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 block uppercase font-bold">Entradas</span>
-              <span id="resumo-entradas" class="text-sm font-bold text-emerald-400">R$ 0,00</span>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">Entradas</p>
+              <p id="p1-entradas" class="text-xs font-bold text-emerald-400">R$ 0,00</p>
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs">
-              <i class="fa-solid fa-arrow-up-right"></i>
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-arrow-up"></i>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 block uppercase font-bold">Saídas</span>
-              <span id="resumo-saidas" class="text-sm font-bold text-rose-400">R$ 0,00</span>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">Saídas</p>
+              <p id="p1-saidas" class="text-xs font-bold text-rose-400">R$ 0,00</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- FORMULÁRIO NOVO GASTO -->
+      <!-- FORMULÁRIO DE NOVO GASTO -->
       <div class="glass-card rounded-3xl p-5 shadow-lg border border-slate-800">
-        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-circle-plus text-rose-500"></i>
+        <h3 class="text-sm font-bold text-white mb-3.5 flex items-center gap-2">
+          <i class="fa-solid fa-circle-plus text-rose-500 text-base"></i>
           Registrar Novo Gasto
         </h3>
 
-        <form id="form-despesa" class="space-y-4">
+        <form id="form-novo-gasto" class="space-y-3.5">
           <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1.5">Descrição do Gasto</label>
-            <input type="text" id="gasto-descricao" placeholder="Ex: Supermercado, Uber, Aluguel..." required
-              class="w-full bg-slate-900/80 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Descrição do Gasto</label>
+            <input type="text" id="gasto-descricao" placeholder="Ex: Mercado, Combustível, Aluguel..." required
+              class="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition">
           </div>
 
           <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1.5">Valor (R$)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Valor (R$)</label>
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">R$</span>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">R$</span>
               <input type="number" step="0.01" min="0.01" id="gasto-valor" placeholder="0,00" required
-                class="w-full bg-slate-900/80 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl pl-11 pr-4 py-3 text-base font-bold text-white placeholder-slate-500 outline-none transition">
+                class="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold text-white placeholder-slate-500 outline-none transition">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1.5">Categoria</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Categoria</label>
             <div class="grid grid-cols-3 gap-2" id="categoria-selector">
-              <button type="button" data-cat="Alimentação" class="cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-utensils text-sm"></i>
-                Alimentação
+              <button type="button" data-cat="Alimentação" class="cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-utensils text-xs"></i> Alimentação
               </button>
-              <button type="button" data-cat="Moradia" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-house text-sm"></i>
-                Moradia
+              <button type="button" data-cat="Moradia" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-house text-xs"></i> Moradia
               </button>
-              <button type="button" data-cat="Transporte" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-car text-sm"></i>
-                Transporte
+              <button type="button" data-cat="Transporte" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-car text-xs"></i> Transporte
               </button>
-              <button type="button" data-cat="Lazer" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-gamepad text-sm"></i>
-                Lazer
+              <button type="button" data-cat="Lazer" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-gamepad text-xs"></i> Lazer
               </button>
-              <button type="button" data-cat="Saúde" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-heart-pulse text-sm"></i>
-                Saúde
+              <button type="button" data-cat="Saúde" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-heart-pulse text-xs"></i> Saúde
               </button>
-              <button type="button" data-cat="Outros" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
-                <i class="fa-solid fa-tags text-sm"></i>
-                Outros
+              <button type="button" data-cat="Outros" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
+                <i class="fa-solid fa-tags text-xs"></i> Outros
               </button>
             </div>
             <input type="hidden" id="gasto-categoria" value="Alimentação">
           </div>
 
-          <button type="submit" class="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-rose-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-check"></i>
+          <button type="submit" class="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-rose-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs">
+            <i class="fa-solid fa-check text-sm"></i>
             Salvar Gasto
           </button>
         </form>
       </div>
 
-      <!-- ÚLTIMOS LANÇAMENTOS RÁPIDOS -->
+      <!-- ÚLTIMOS LANÇAMENTOS -->
       <div class="space-y-2">
         <div class="flex justify-between items-center px-1">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Últimas Saídas</span>
-          <button onclick="goToPage(1)" class="text-xs text-emerald-400 font-semibold hover:underline">Ver tudo</button>
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Últimos Lançamentos</span>
+          <button id="btn-goto-history" class="text-xs text-emerald-400 font-semibold hover:underline">Ver Histórico</button>
         </div>
-        <div id="quick-expenses-list" class="space-y-2">
-          <!-- Injetado dinamicamente via JS -->
+        <div id="p1-quick-list" class="space-y-2">
+          <!-- Injetado via JS -->
         </div>
       </div>
     </section>
 
     <!-- ========================================== -->
-    <!-- PÁGINA 2: HISTÓRICO DE GASTOS              -->
+    <!-- PÁGINA 2: HISTÓRICO & FECHAMENTOS          -->
     <!-- ========================================== -->
     <section id="page-2" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
-      <div class="flex justify-between items-center">
+      
+      <!-- BANNER ENCERRAMENTO DE MÊS -->
+      <div class="glass-card rounded-3xl p-4 border border-amber-500/30 bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 flex justify-between items-center">
         <div>
-          <h2 class="text-xl font-bold text-white">Histórico de Gastos</h2>
-          <p class="text-xs text-slate-400">Organizados por data e hora</p>
+          <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Fechamento do Mês</span>
+          <h3 id="close-banner-title" class="text-xs font-bold text-white">Mês Selecionado</h3>
+          <p class="text-[10px] text-slate-400">Finalize o mês para congelar o resumo e iniciar zerado.</p>
         </div>
-        <span id="total-historico-count" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-semibold border border-slate-700">0 itens</span>
+        <button id="btn-open-encerrar-mes" class="shrink-0 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-3 py-2.5 rounded-2xl shadow-lg shadow-amber-500/20 active:scale-[0.95] transition flex items-center gap-1.5">
+          <i class="fa-solid fa-lock text-xs"></i>
+          Encerrar
+        </button>
       </div>
 
-      <!-- BUSCA E FILTRO DE CATEGORIA -->
+      <!-- BUSCA E FILTROS -->
       <div class="space-y-2">
         <div class="relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-          <input type="text" id="search-input" placeholder="Buscar por descrição..." 
-            class="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition">
+          <input type="text" id="search-input" placeholder="Buscar no mês selecionado..." 
+            class="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition">
         </div>
 
-        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="filter-pills">
-          <button data-filter="Todos" class="filter-pill active-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500 text-slate-950">Todos</button>
-          <button data-filter="Alimentação" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Alimentação</button>
-          <button data-filter="Moradia" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Moradia</button>
-          <button data-filter="Transporte" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Transporte</button>
-          <button data-filter="Lazer" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Lazer</button>
-          <button data-filter="Saúde" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Saúde</button>
-          <button data-filter="Outros" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Outros</button>
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5" id="filter-pills">
+          <button data-filter="Todos" class="filter-pill active-pill shrink-0 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950">Todos</button>
+          <button data-filter="Alimentação" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Alimentação</button>
+          <button data-filter="Moradia" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Moradia</button>
+          <button data-filter="Transporte" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Transporte</button>
+          <button data-filter="Lazer" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Lazer</button>
+          <button data-filter="Saúde" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Saúde</button>
+          <button data-filter="Outros" class="filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Outros</button>
         </div>
       </div>
 
-      <!-- LISTA DE HISTÓRICO COMPLETA -->
-      <div id="full-expenses-list" class="space-y-2">
-        <!-- Renderizado dinamicamente -->
+      <!-- LISTA DE HISTÓRICO -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center px-1">
+          <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lançamentos do Mês</h3>
+          <span id="active-count-badge" class="text-[10px] font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">0 itens</span>
+        </div>
+        <div id="active-history-list" class="space-y-2">
+          <!-- Renderizado via JS -->
+        </div>
+      </div>
+
+      <!-- SEÇÃO SANFONADA: FECHAMENTOS ANTERIORES -->
+      <div class="pt-3 border-t border-slate-800/80 space-y-2">
+        <button id="accordion-toggle-btn" class="w-full glass-card rounded-2xl p-3 flex justify-between items-center text-left border border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-box-archive"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">Fechamentos Anteriores (Encerrados)</h4>
+              <p class="text-[10px] text-slate-400">Consulte resumos de meses arquivados</p>
+            </div>
+          </div>
+          <i id="accordion-arrow" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-300"></i>
+        </button>
+
+        <div id="closed-months-container" class="hidden space-y-2.5 pt-1">
+          <!-- Cards de meses encerrados -->
+        </div>
       </div>
     </section>
 
@@ -254,146 +314,402 @@
     <!-- ========================================== -->
     <section id="page-3" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       <div>
-        <h2 class="text-xl font-bold text-white">Rendas e Entradas</h2>
-        <p class="text-xs text-slate-400">Configure seus salários e valores extras</p>
+        <h2 class="text-lg font-extrabold text-white">Entradas & Renda</h2>
+        <p class="text-xs text-slate-400">Cadastre seus salários e receitas no mês selecionado</p>
       </div>
 
       <!-- CARD RESUMO RENDA -->
-      <div class="glass-card rounded-3xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 to-slate-900">
-        <span class="text-xs uppercase font-semibold text-emerald-400 tracking-wider">Total de Renda Mensal</span>
-        <h3 id="total-renda-valor" class="text-3xl font-extrabold text-emerald-400 mt-1">R$ 0,00</h3>
-        <p class="text-[11px] text-slate-400 mt-1">Soma de todos os salários e aportes informados.</p>
+      <div class="glass-card rounded-3xl p-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/30 to-slate-900">
+        <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">Renda Total Registrada</span>
+        <h3 id="p3-total-renda" class="text-2xl font-black text-emerald-400 mt-0.5">R$ 0,00</h3>
+        <p class="text-[10px] text-slate-400 mt-1">Soma de salários e extras configurados para este mês.</p>
       </div>
 
-      <!-- FORMULÁRIO ADD ENTRADA -->
-      <div class="glass-card rounded-3xl p-5 border border-slate-800">
-        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+      <!-- FORMULÁRIO DE ENTRADAS -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-money-bill-wave text-emerald-400"></i>
-          Adicionar / Cadastrar Renda
+          Cadastrar Nova Entrada
         </h3>
+
         <form id="form-entrada" class="space-y-3">
           <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1">Origem / Descrição</label>
-            <input type="text" id="entrada-nome" placeholder="Ex: Salário Principal, Freela, Venda..." required
-              class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Origem / Descrição</label>
+            <input type="text" id="entrada-nome" placeholder="Ex: Salário 1, Salário 2, Freela, Extra..." required
+              class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none">
           </div>
 
           <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1">Valor Recebido (R$)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Valor Recebido (R$)</label>
             <div class="relative">
               <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">R$</span>
               <input type="number" step="0.01" min="0.01" id="entrada-valor" placeholder="0,00" required
-                class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl pl-10 pr-3 py-2.5 text-sm font-bold text-white placeholder-slate-500 outline-none">
+                class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl pl-10 pr-3 py-2 text-xs font-bold text-white placeholder-slate-500 outline-none">
             </div>
           </div>
 
-          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 rounded-2xl shadow-md shadow-emerald-500/20 active:scale-[0.98] transition text-xs flex items-center justify-center gap-2">
-            <i class="fa-solid fa-plus"></i>
-            Adicionar Renda
+          <div class="flex items-center gap-2 pt-0.5">
+            <input type="checkbox" id="entrada-recorrente" checked class="w-4 h-4 accent-emerald-500 rounded bg-slate-900 border-slate-700">
+            <label for="entrada-recorrente" class="text-xs text-slate-300 font-medium">
+              Replicar automaticamente nos próximos meses
+            </label>
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition text-xs flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus text-xs"></i>
+            Salvar Entrada
           </button>
         </form>
       </div>
 
-      <!-- LISTA DE ENTRADAS CADASTRADAS -->
+      <!-- LISTA DE ENTRADAS -->
       <div class="space-y-2">
-        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Entradas Registradas</h4>
+        <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">Entradas Registradas no Mês</h4>
         <div id="incomes-list" class="space-y-2">
-          <!-- Renderizado dinamicamente -->
+          <!-- Renderizado via JS -->
         </div>
       </div>
     </section>
 
     <!-- ========================================== -->
-    <!-- PÁGINA 4: GRÁFICOS & ANALYTICS             -->
+    <!-- PÁGINA 4: DASHBOARD & GRÁFICOS             -->
     <!-- ========================================== -->
     <section id="page-4" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       <div>
-        <h2 class="text-xl font-bold text-white">Análise & Gráficos</h2>
-        <p class="text-xs text-slate-400">Diagnóstico inteligente dos seus hábitos</p>
+        <h2 class="text-lg font-extrabold text-white">Dashboard & Gráficos</h2>
+        <p class="text-xs text-slate-400">Análise de despesas no mês selecionado</p>
       </div>
 
       <!-- PROGRESSO DO ORÇAMENTO -->
-      <div class="glass-card rounded-3xl p-5 border border-slate-800 space-y-2">
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-2">
         <div class="flex justify-between items-center text-xs">
-          <span class="font-semibold text-slate-300">Uso do Orçamento Total</span>
-          <span id="budget-percentage" class="font-bold text-emerald-400">0%</span>
-        </div>
-        
-        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden p-0.5 border border-slate-800">
-          <div id="budget-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+          <span class="font-semibold text-slate-300">Comprometimento da Renda</span>
+          <span id="p4-budget-perc" class="font-bold text-emerald-400">0%</span>
         </div>
 
-        <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1">
-          <span>Gasto: <strong id="progresso-gasto" class="text-slate-200">R$ 0,00</strong></span>
-          <span>Renda: <strong id="progresso-renda" class="text-slate-200">R$ 0,00</strong></span>
+        <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+          <div id="p4-budget-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <div class="flex justify-between items-center text-[10px] text-slate-400 pt-0.5">
+          <span>Total Gasto: <strong id="p4-gasto-val" class="text-slate-200">R$ 0,00</strong></span>
+          <span>Renda Total: <strong id="p4-renda-val" class="text-slate-200">R$ 0,00</strong></span>
         </div>
       </div>
 
-      <!-- DICA & DIAGNÓSTICO FINANCEIRO -->
-      <div id="diagnostic-card" class="p-4 rounded-3xl bg-slate-800/80 border border-slate-700 flex gap-3.5 items-start">
-        <div id="diagnostic-icon" class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-base">
+      <!-- MINI MÉTRICAS -->
+      <div class="grid grid-cols-3 gap-2">
+        <div class="glass-card rounded-2xl p-2.5 border border-slate-800 text-center">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block">Renda</span>
+          <span id="metric-renda" class="text-xs font-extrabold text-emerald-400 mt-0.5 block">R$ 0</span>
+        </div>
+
+        <div class="glass-card rounded-2xl p-2.5 border border-slate-800 text-center">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block">Gastos</span>
+          <span id="metric-gastos" class="text-xs font-extrabold text-rose-400 mt-0.5 block">R$ 0</span>
+        </div>
+
+        <div class="glass-card rounded-2xl p-2.5 border border-slate-800 text-center">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block">Balanço</span>
+          <span id="metric-balanco" class="text-xs font-extrabold text-white mt-0.5 block">R$ 0</span>
+        </div>
+      </div>
+
+      <!-- DIAGNÓSTICO -->
+      <div id="p4-diagnostic-card" class="p-3.5 rounded-3xl bg-slate-800/80 border border-slate-700 flex gap-3 items-start">
+        <div id="p4-diagnostic-icon" class="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-sm">
           <i class="fa-solid fa-wand-magic-sparkles"></i>
         </div>
         <div>
-          <h4 id="diagnostic-title" class="text-xs font-bold text-white">Excelente Saúde Financeira!</h4>
-          <p id="diagnostic-body" class="text-[11px] text-slate-300 leading-relaxed mt-0.5">Você está usando menos da metade da sua renda. Que tal destinar uma parte do excedente para reservas ou investimentos?</p>
+          <h4 id="p4-diagnostic-title" class="text-xs font-bold text-white">Saúde Financeira</h4>
+          <p id="p4-diagnostic-body" class="text-[10px] text-slate-300 leading-relaxed mt-0.5">Nenhum dado registrado para emitir análise.</p>
         </div>
       </div>
 
-      <!-- GRÁFICO DE PIZZA / CATEGORIAS -->
-      <div class="glass-card rounded-3xl p-5 border border-slate-800 space-y-3">
+      <!-- GRÁFICO DESPESAS POR CATEGORIA -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-2">
         <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
           <i class="fa-solid fa-chart-pie text-purple-400"></i>
           Gastos por Categoria
         </h3>
-        
-        <div class="relative w-full aspect-square max-w-[240px] mx-auto flex items-center justify-center">
+
+        <div class="relative w-full aspect-square max-w-[200px] mx-auto flex items-center justify-center">
           <canvas id="categoryChart"></canvas>
-          <div id="no-data-chart" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
-            <i class="fa-solid fa-chart-line text-2xl mb-2 opacity-50"></i>
-            <span>Nenhum gasto registrado para gerar o gráfico.</span>
+          <div id="no-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
+            <i class="fa-solid fa-chart-line text-xl mb-1 opacity-40"></i>
+            <span>Sem gastos neste mês.</span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PÁGINA 5: INVESTIMENTOS (CONTÍNUO / VITALÍCIO) -->
+    <!-- ========================================== -->
+    <section id="page-5" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
+            <i class="fa-solid fa-piggy-bank text-cyan-400"></i>
+            Investimentos
+          </h2>
+          <p class="text-xs text-slate-400">Acompanhamento contínuo e vitalício do seu patrimônio</p>
+        </div>
+        <span class="text-[9px] bg-cyan-500/20 text-cyan-300 font-bold px-2.5 py-1 rounded-xl border border-cyan-500/30">
+          Sem Encerramento
+        </span>
+      </div>
+
+      <!-- CARDS DE PATRIMÔNIO VITALÍCIO -->
+      <div class="glass-card-invest rounded-3xl p-4 shadow-xl border border-cyan-500/30 space-y-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Patrimônio Em Carteira</span>
+            <h3 id="p5-patrimonio-ativo" class="text-2xl font-black text-cyan-300 mt-0.5">R$ 0,00</h3>
+          </div>
+          <div class="w-9 h-9 rounded-2xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-sm border border-cyan-500/40">
+            <i class="fa-solid fa-vault"></i>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/60">
+          <div>
+            <span class="text-[9px] uppercase font-bold text-slate-400 block">Total Aportado</span>
+            <strong id="p5-total-aportado" class="text-xs font-bold text-slate-200">R$ 0,00</strong>
+          </div>
+          <div>
+            <span class="text-[9px] uppercase font-bold text-slate-400 block">Lucro Realizado (Resgates)</span>
+            <strong id="p5-lucro-realizado" class="text-xs font-bold text-emerald-400">R$ 0,00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO DE NOVO APORTE -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-plus text-cyan-400"></i>
+          Registrar Novo Aporte / Ativo
+        </h3>
+
+        <form id="form-novo-investimento" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nome do Ativo / Investimento</label>
+            <input type="text" id="invest-nome" placeholder="Ex: PETR4, CDB Itaú 110%, Tesouro Selic, Bitcoin..." required
+              class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-2xl px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Categoria</label>
+              <select id="invest-categoria" class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-2xl px-3 py-2 text-xs text-white outline-none">
+                <option value="Renda Fixa">Renda Fixa</option>
+                <option value="Ações">Ações</option>
+                <option value="FIIs">FIIs (Imobiliário)</option>
+                <option value="Cripto">Cripto</option>
+                <option value="Tesouro Direto">Tesouro Direto</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Valor Aportado (R$)</label>
+              <input type="number" step="0.01" min="0.01" id="invest-valor" placeholder="0,00" required
+                class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-2xl px-3 py-2 text-xs font-bold text-white outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Data do Aporte</label>
+              <input type="date" id="invest-data" required
+                class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-2xl px-3 py-2 text-xs text-white outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Observações (opcional)</label>
+              <input type="text" id="invest-notas" placeholder="Ex: Corretora X"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-2xl px-3 py-2 text-xs text-white outline-none">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold py-2.5 rounded-2xl shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition text-xs flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-up-right-dots text-xs"></i>
+            Salvar Investimento
+          </button>
+        </form>
+      </div>
+
+      <!-- ALOCAÇÃO DE PATRIMÔNIO (GRÁFICO DE APORTES) -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-2">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+          Distribuição dos Ativos
+        </h3>
+
+        <div class="relative w-full aspect-square max-w-[190px] mx-auto flex items-center justify-center">
+          <canvas id="investChart"></canvas>
+          <div id="no-invest-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
+            <i class="fa-solid fa-vault text-xl mb-1 opacity-40"></i>
+            <span>Nenhum ativo em carteira.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LISTA DE INVESTIMENTOS COM FILTROS -->
+      <div class="space-y-2">
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5" id="invest-filter-pills">
+          <button data-invest-filter="ALL" class="invest-pill active-invest-pill shrink-0 px-3 py-1 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950">Todos os Ativos</button>
+          <button data-invest-filter="ACTIVE" class="invest-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Em Carteira</button>
+          <button data-invest-filter="REDEEMED" class="invest-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">Encerrados / Resgatados</button>
+        </div>
+
+        <div id="investments-list" class="space-y-2">
+          <!-- Renderizado via JS -->
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- NAVBAR INFERIOR FIXA -->
-  <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 z-40">
-    <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
-      <button onclick="goToPage(0)" id="nav-btn-0" class="nav-btn nav-active flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
-        <i class="fa-solid fa-plus-circle text-lg mb-1"></i>
-        <span class="text-[10px] font-semibold">Lançar</span>
+  <!-- BOTTOM NAVBAR FIXA (5 ÍCONES) -->
+  <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-1.5 z-40">
+    <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
+      <button id="nav-btn-0" class="nav-btn nav-active flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-plus-circle text-base mb-0.5"></i>
+        <span class="text-[9px] font-semibold">Gastar</span>
       </button>
 
-      <button onclick="goToPage(1)" id="nav-btn-1" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
-        <i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
-        <span class="text-[10px] font-semibold">Histórico</span>
+      <button id="nav-btn-1" class="nav-btn flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-receipt text-base mb-0.5"></i>
+        <span class="text-[9px] font-semibold">Histórico</span>
       </button>
 
-      <button onclick="goToPage(2)" id="nav-btn-2" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
-        <i class="fa-solid fa-hand-holding-dollar text-lg mb-1"></i>
-        <span class="text-[10px] font-semibold">Entradas</span>
+      <button id="nav-btn-2" class="nav-btn flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-hand-holding-dollar text-base mb-0.5"></i>
+        <span class="text-[9px] font-semibold">Entradas</span>
       </button>
 
-      <button onclick="goToPage(3)" id="nav-btn-3" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
-        <i class="fa-solid fa-chart-line text-lg mb-1"></i>
-        <span class="text-[10px] font-semibold">Análises</span>
+      <button id="nav-btn-3" class="nav-btn flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-chart-line text-base mb-0.5"></i>
+        <span class="text-[9px] font-semibold">Análise</span>
+      </button>
+
+      <button id="nav-btn-4" class="nav-btn flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-piggy-bank text-base mb-0.5"></i>
+        <span class="text-[9px] font-semibold">Investir</span>
       </button>
     </div>
   </nav>
 
-  <!-- MODAL DE EDIÇÃO DE GASTO -->
-  <div id="modal-edit-gasto" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+  <!-- ========================================== -->
+  <!-- MODAIS DE INTERAÇÃO                        -->
+  <!-- ========================================== -->
+
+  <!-- MODAL: RESGATAR / ENCERRAR ATIVO -->
+  <div id="modal-redeem-investment" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <h3 class="text-xs font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-money-bill-transfer text-emerald-400"></i>
+          Resgatar / Encerrar Ativo
+        </h3>
+        <button id="btn-close-modal-redeem" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form id="form-redeem-investment" class="space-y-3">
+        <input type="hidden" id="redeem-invest-id">
+        
+        <div class="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/60 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold">Ativo Selecionado</p>
+          <h4 id="redeem-invest-name" class="text-xs font-extrabold text-white">---</h4>
+          <p class="text-[10px] text-slate-300">Valor Aportado Original: <strong id="redeem-invest-original" class="text-cyan-300">R$ 0,00</strong></p>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1">Valor Final Resgatado (R$)</label>
+          <input type="number" step="0.01" min="0.01" id="redeem-invest-valor" placeholder="0,00" required
+            class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1">Data do Resgate</label>
+          <input type="date" id="redeem-invest-data" required
+            class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btn-cancel-redeem" class="w-1/2 py-2.5 rounded-2xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="w-1/2 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">Confirmar Resgate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ENCERRAR MÊS -->
+  <div id="modal-encerrar-mes" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <h3 class="text-xs font-bold text-white">Encerrar Mês</h3>
+        </div>
+        <button id="btn-close-modal-encerrar" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="glass-card rounded-2xl p-3.5 space-y-2 border border-slate-800">
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Mês Fechado:</span>
+          <span id="close-modal-month-name" class="font-bold text-white">---</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Total Renda:</span>
+          <span id="close-modal-renda" class="font-bold text-emerald-400">R$ 0,00</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Total Gastos:</span>
+          <span id="close-modal-gastos" class="font-bold text-rose-400">R$ 0,00</span>
+        </div>
+        <div class="flex justify-between text-xs pt-2 border-t border-slate-800 font-bold">
+          <span class="text-slate-200">Saldo Final:</span>
+          <span id="close-modal-resultado" class="text-white">R$ 0,00</span>
+        </div>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <label class="flex items-center gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 cursor-pointer">
+          <input type="checkbox" id="close-opt-replicate-incomes" checked class="w-4 h-4 accent-emerald-500">
+          <span class="text-slate-300">Copiar rendas recorrentes para próximo mês</span>
+        </label>
+
+        <label class="flex items-center gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 cursor-pointer">
+          <input type="checkbox" id="close-opt-rollover-balance" checked class="w-4 h-4 accent-emerald-500">
+          <span class="text-slate-300">Carregar saldo como 'Saldo Anterior'</span>
+        </label>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button type="button" id="btn-cancel-encerrar" class="w-1/2 py-2.5 rounded-2xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+        <button type="button" id="btn-confirm-encerrar" class="w-1/2 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20">Confirmar e Avançar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR GASTO -->
+  <div id="modal-edit-gasto" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-xs font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-pen-to-square text-amber-400"></i>
           Editar Gasto
         </h3>
-        <button onclick="closeModal('modal-edit-gasto')" class="text-slate-400 hover:text-white p-1">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button id="btn-close-modal-edit" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
         </button>
       </div>
 
@@ -424,26 +740,44 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button type="button" onclick="closeModal('modal-edit-gasto')" class="w-1/2 py-2.5 rounded-2xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+          <button type="button" id="btn-cancel-edit" class="w-1/2 py-2.5 rounded-2xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
           <button type="submit" class="w-1/2 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">Salvar Alteração</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- TOAST FEEDBACK FLOATING -->
-  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-emerald-500/40 text-white px-4 py-2.5 rounded-full text-xs font-medium shadow-2xl flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300">
-    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+  <!-- MODAL: DETALHES DE MÊS FECHADO -->
+  <div id="modal-closed-details" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4 max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3 shrink-0">
+        <h3 id="closed-detail-title" class="text-xs font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-box-archive text-amber-400"></i>
+          Resumo de Mês Arquivado
+        </h3>
+        <button id="btn-close-modal-closed" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div id="closed-detail-body" class="overflow-y-auto space-y-3 flex-1 pr-1">
+        <!-- Renderizado via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST FEEDBACK -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-emerald-500/40 text-white px-4 py-2 rounded-full text-xs font-medium shadow-2xl flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
     <span id="toast-message">Operação realizada!</span>
   </div>
 
-  <!-- FIREBASE ENGINE & APP LOGIC -->
+  <!-- FIREBASE & LÓGICA JAVASCRIPT -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Configuration provided by user
+    // Firebase Configuração
     const firebaseConfig = {
       apiKey: "AIzaSyDqoV83sZcjRrd845-x3FSe07EgUwWjyrM",
       authDomain: "despesaspess.firebaseapp.com",
@@ -454,18 +788,21 @@
       measurementId: "G-98ZK2BZK3H"
     };
 
-    // State Variables
-    let app, db, auth;
-    let currentUser = null;
+    // Estado Global da Aplicação
+    let db = null;
+    let selectedDate = new Date();
     let expenses = [];
     let incomes = [];
-    let currentCategoryFilter = "Todos";
-    let chartInstance = null;
-    let useFirebase = true;
+    let closedMonths = [];
+    let investments = []; // Investimentos contínuos (vitalícios)
+    
+    let activeCategoryFilter = "Todos";
+    let activeInvestFilter = "ALL"; // ALL, ACTIVE, REDEEMED
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'despesas-pessoais-app';
+    let expenseChartInstance = null;
+    let investChartInstance = null;
 
-    // Category Styling Dictionary
+    // Config de Categorias de Despesas
     const categoryConfig = {
       'Alimentação': { icon: 'fa-utensils', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30', hex: '#f59e0b' },
       'Moradia': { icon: 'fa-house', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', hex: '#3b82f6' },
@@ -475,149 +812,292 @@
       'Outros': { icon: 'fa-tags', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', hex: '#94a3b8' }
     };
 
-    // Formatter
+    // Config de Categorias de Investimento
+    const investCategoryConfig = {
+      'Renda Fixa': { icon: 'fa-shield-halved', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', hex: '#3b82f6' },
+      'Ações': { icon: 'fa-chart-line', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', hex: '#10b981' },
+      'FIIs': { icon: 'fa-building-columns', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30', hex: '#f59e0b' },
+      'Cripto': { icon: 'fa-coins', color: 'bg-purple-500/15 text-purple-400 border-purple-500/30', hex: '#a855f7' },
+      'Tesouro Direto': { icon: 'fa-landmark', color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', hex: '#06b6d4' },
+      'Outros': { icon: 'fa-vault', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', hex: '#94a3b8' }
+    };
+
+    // Helper Functions
     const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
-    // Initializer
-    async function init() {
+    const getMonthKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    };
+
+    const getMonthNameString = (date) => {
+      const str = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
+    const formatDateBR = (isoDateStr) => {
+      if (!isoDateStr) return '---';
+      const d = new Date(isoDateStr);
+      return isNaN(d) ? '---' : d.toLocaleDateString('pt-BR');
+    };
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set default date input for investments to today
+      const todayIso = new Date().toISOString().split('T')[0];
+      document.getElementById('invest-data').value = todayIso;
+      document.getElementById('redeem-invest-data').value = todayIso;
+
+      loadFromLocalStorage();
+
       try {
-        app = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
-        auth = getAuth(app);
-
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            currentUser = user;
-            setupFirestoreListeners();
-          } else {
-            await signInAnonymously(auth);
-          }
-        });
+        updateSyncBadge("Online", true);
       } catch (err) {
-        console.warn("Firebase fallback active (LocalStorage mode):", err);
-        useFirebase = false;
-        updateSyncBadge(false);
-        loadLocalStorage();
+        console.warn("Firebase offline ou com falha. Operando via LocalStorage:", err);
+        updateSyncBadge("Modo Local", false);
       }
 
-      setupCategoryButtons();
-      setupPillFilters();
-      setupSearchInput();
-      setupScrollListener();
-      initChart();
-    }
-
-    function updateSyncBadge(online) {
-      const badge = document.getElementById('sync-status');
-      const text = document.getElementById('sync-text');
-      if (online) {
-        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-        text.innerText = "Sincronizado";
-      } else {
-        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20";
-        text.innerText = "Modo Local";
-      }
-    }
-
-    // FIRESTORE LISTENERS
-    function setupFirestoreListeners() {
-      if (!currentUser) return;
-
-      // Expenses Collection Path (Rule 1 Compliant)
-      const expensesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses');
-      onSnapshot(expensesRef, (snapshot) => {
-        expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Client-side sort descending by date (Rule 2 Compliant)
-        expenses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        renderAll();
-      }, (err) => {
-        console.error("Firestore Expense Error:", err);
-        loadLocalStorage();
-      });
-
-      // Incomes Collection Path
-      const incomesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes');
-      onSnapshot(incomesRef, (snapshot) => {
-        incomes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        incomes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        renderAll();
-      }, (err) => {
-        console.error("Firestore Income Error:", err);
-        loadLocalStorage();
-      });
-    }
-
-    // LOCALSTORAGE FALLBACK
-    function loadLocalStorage() {
-      const expStored = localStorage.getItem('dp_expenses');
-      const incStored = localStorage.getItem('dp_incomes');
-
-      expenses = expStored ? JSON.parse(expStored) : [];
-      incomes = incStored ? JSON.parse(incStored) : [
-        { id: 'inc_1', title: 'Salário 1', amount: 3000, createdAt: new Date().toISOString() }
-      ];
+      updateMonthLabel();
+      initCharts();
       renderAll();
+      bindEventListeners();
+    });
+
+    // LOCAL STORAGE SYNC
+    function loadFromLocalStorage() {
+      try {
+        expenses = JSON.parse(localStorage.getItem('dp_expenses') || '[]');
+        incomes = JSON.parse(localStorage.getItem('dp_incomes') || '[]');
+        closedMonths = JSON.parse(localStorage.getItem('dp_closed_months') || '[]');
+        investments = JSON.parse(localStorage.getItem('dp_investments') || '[]');
+      } catch (e) {
+        console.error("Erro ao ler dados locais:", e);
+      }
     }
 
-    function saveLocalStorage() {
+    function saveToLocalStorage() {
       localStorage.setItem('dp_expenses', JSON.stringify(expenses));
       localStorage.setItem('dp_incomes', JSON.stringify(incomes));
+      localStorage.setItem('dp_closed_months', JSON.stringify(closedMonths));
+      localStorage.setItem('dp_investments', JSON.stringify(investments));
     }
 
-    // UI RENDER PIPELINE
-    function renderAll() {
-      calculateTotals();
-      renderQuickExpenses();
-      renderFullExpenses();
-      renderIncomes();
-      updateChart();
-      updateDiagnostic();
+    // CLOUD SYNC FIRESTORE
+    async function syncDocToCloud(collectionName, item) {
+      if (!db) return;
+      try {
+        await setDoc(doc(db, collectionName, item.id), item);
+      } catch (err) {
+        console.warn(`Sincronização em nuvem (${collectionName}) pendente localmente:`, err);
+      }
     }
 
-    // CALCULATIONS & RESUMO
-    function calculateTotals() {
-      const totalIncomes = incomes.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      const saldo = totalIncomes - totalExpenses;
+    async function deleteDocFromCloud(collectionName, id) {
+      if (!db) return;
+      try {
+        await deleteDoc(doc(db, collectionName, id));
+      } catch (err) {
+        console.warn(`Exclusão na nuvem (${collectionName}) pendente:`, err);
+      }
+    }
 
-      document.getElementById('resumo-entradas').innerText = formatCurrency(totalIncomes);
-      document.getElementById('resumo-saidas').innerText = formatCurrency(totalExpenses);
+    // MÊS ATUALIZAÇÃO
+    function updateMonthLabel() {
+      const label = getMonthNameString(selectedDate);
+      document.getElementById('current-month-label').innerText = label;
+
+      const currentKey = getMonthKey(selectedDate);
+      const isClosed = closedMonths.some(m => m.monthKey === currentKey);
       
-      const saldoEl = document.getElementById('saldo-total');
-      saldoEl.innerText = formatCurrency(saldo);
-      saldoEl.className = `text-3xl font-extrabold tracking-tight mb-4 ${saldo >= 0 ? 'text-white' : 'text-rose-400'}`;
+      const badge = document.getElementById('month-status-badge');
+      if (isClosed) {
+        badge.innerText = "Mês Encerrado";
+        badge.className = "text-[9px] text-amber-400 font-semibold block";
+      } else {
+        badge.innerText = "Mês Ativo";
+        badge.className = "text-[9px] text-emerald-400 font-semibold block";
+      }
 
-      document.getElementById('total-renda-valor').innerText = formatCurrency(totalIncomes);
-      document.getElementById('progresso-gasto').innerText = formatCurrency(totalExpenses);
-      document.getElementById('progresso-renda').innerText = formatCurrency(totalIncomes);
+      document.getElementById('p1-month-pill').innerText = label;
+      document.getElementById('close-banner-title').innerText = label;
     }
 
-    // RENDER QUICK EXPENSES (PAGE 1)
-    function renderQuickExpenses() {
-      const container = document.getElementById('quick-expenses-list');
-      const latest = expenses.slice(0, 3);
+    // RENDERIZADOR MASTER
+    function renderAll() {
+      const currentKey = getMonthKey(selectedDate);
+
+      // Despesas e Entradas por mês
+      const monthExpenses = expenses.filter(e => e.monthKey === currentKey);
+      const monthIncomes = incomes.filter(i => i.monthKey === currentKey);
+
+      const totalInc = monthIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+      const totalExp = monthExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+      const saldo = totalInc - totalExp;
+
+      // P1 UI
+      document.getElementById('p1-entradas').innerText = formatCurrency(totalInc);
+      document.getElementById('p1-saidas').innerText = formatCurrency(totalExp);
+      const saldoEl = document.getElementById('p1-saldo');
+      saldoEl.innerText = formatCurrency(saldo);
+      saldoEl.className = `text-3xl font-black mt-0.5 tracking-tight ${saldo >= 0 ? 'text-white' : 'text-rose-400'}`;
+
+      // P3 UI
+      document.getElementById('p3-total-renda').innerText = formatCurrency(totalInc);
+
+      // P4 UI
+      document.getElementById('p4-renda-val').innerText = formatCurrency(totalInc);
+      document.getElementById('p4-gasto-val').innerText = formatCurrency(totalExp);
+      document.getElementById('metric-renda').innerText = formatCurrency(totalInc);
+      document.getElementById('metric-gastos').innerText = formatCurrency(totalExp);
+      
+      const metBal = document.getElementById('metric-balanco');
+      metBal.innerText = formatCurrency(saldo);
+      metBal.className = `text-xs font-extrabold mt-0.5 block ${saldo >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      const ratio = totalInc > 0 ? Math.min(Math.round((totalExp / totalInc) * 100), 100) : (totalExp > 0 ? 100 : 0);
+      document.getElementById('p4-budget-perc').innerText = `${ratio}%`;
+      const bar = document.getElementById('p4-budget-bar');
+      bar.style.width = `${ratio}%`;
+      bar.className = `h-full rounded-full transition-all duration-500 ${ratio > 85 ? 'bg-rose-500' : (ratio > 50 ? 'bg-amber-500' : 'bg-emerald-500')}`;
+
+      // Render Listas P1-P4
+      renderQuickList(monthExpenses);
+      renderActiveHistoryList(monthExpenses);
+      renderIncomesList(monthIncomes);
+      renderClosedMonthsList();
+      updateExpenseChart(monthExpenses);
+      updateDiagnostic(ratio, totalInc, totalExp);
+
+      // Render PÁGINA 5 (INVESTIMENTOS CONTÍNUOS)
+      renderInvestments();
+    }
+
+    // PÁGINA 5: RENDERIZADOR DE INVESTIMENTOS
+    function renderInvestments() {
+      // 1. Cálculos do Patrimônio Vitalício
+      const activeItems = investments.filter(i => i.status === 'ACTIVE');
+      const redeemedItems = investments.filter(i => i.status === 'REDEEMED');
+
+      const patrimonioAtivo = activeItems.reduce((acc, c) => acc + Number(c.amountInvested || 0), 0);
+      const totalAportadoGeral = investments.reduce((acc, c) => acc + Number(c.amountInvested || 0), 0);
+      const lucroRealizadoTotal = redeemedItems.reduce((acc, c) => acc + Number(c.profitAmount || 0), 0);
+
+      document.getElementById('p5-patrimonio-ativo').innerText = formatCurrency(patrimonioAtivo);
+      document.getElementById('p5-total-aportado').innerText = formatCurrency(totalAportadoGeral);
+      
+      const lucroEl = document.getElementById('p5-lucro-realizado');
+      lucroEl.innerText = formatCurrency(lucroRealizadoTotal);
+      lucroEl.className = `text-xs font-bold ${lucroRealizadoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      // 2. Filtrar lista de investimentos
+      let filtered = investments;
+      if (activeInvestFilter === 'ACTIVE') {
+        filtered = activeItems;
+      } else if (activeInvestFilter === 'REDEEMED') {
+        filtered = redeemedItems;
+      }
+
+      const container = document.getElementById('investments-list');
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="glass-card rounded-2xl p-5 text-center text-xs text-slate-500">Nenhum investimento registrado neste filtro.</div>`;
+      } else {
+        container.innerHTML = filtered.map(item => {
+          const cat = investCategoryConfig[item.category] || investCategoryConfig['Outros'];
+          const isRedeemed = item.status === 'REDEEMED';
+
+          let statusBadge = '';
+          let profitBadge = '';
+
+          if (isRedeemed) {
+            statusBadge = `<span class="text-[9px] bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-full border border-slate-700">Encerrado</span>`;
+            const isProfit = (item.profitAmount || 0) >= 0;
+            const sign = isProfit ? '+' : '';
+            const perc = item.profitPercentage ? `${sign}${item.profitPercentage.toFixed(1)}%` : '0%';
+
+            profitBadge = `
+              <div class="text-right">
+                <span class="text-[9px] text-slate-400 block">Resgatado: ${formatCurrency(item.amountRedeemed)}</span>
+                <span class="text-xs font-bold ${isProfit ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${sign}${formatCurrency(item.profitAmount)} (${perc})
+                </span>
+              </div>`;
+          } else {
+            statusBadge = `<span class="text-[9px] bg-cyan-500/20 text-cyan-300 font-bold px-2 py-0.5 rounded-full border border-cyan-500/30">Em Carteira</span>`;
+            profitBadge = `
+              <div class="text-right">
+                <span class="text-[9px] text-slate-400 block">Aportado</span>
+                <span class="text-xs font-bold text-cyan-300">${formatCurrency(item.amountInvested)}</span>
+              </div>`;
+          }
+
+          return `
+            <div class="glass-card rounded-2xl p-3.5 border border-slate-800 space-y-2">
+              <div class="flex justify-between items-start">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl ${cat.color} flex items-center justify-center border text-xs shrink-0">
+                    <i class="fa-solid ${cat.icon}"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-xs font-extrabold text-white">${escapeHTML(item.name)}</h4>
+                      ${statusBadge}
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5">
+                      ${item.category} • Aporte: ${formatDateBR(item.dateInvested)}
+                    </p>
+                  </div>
+                </div>
+
+                ${profitBadge}
+              </div>
+
+              ${item.notes ? `<p class="text-[10px] text-slate-400 bg-slate-900/60 p-2 rounded-xl italic">"${escapeHTML(item.notes)}"</p>` : ''}
+
+              <div class="flex justify-end items-center gap-2 pt-1 border-t border-slate-800/60">
+                ${!isRedeemed ? `
+                  <button data-action="redeem-invest" data-id="${item.id}" class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-1 rounded-xl transition flex items-center gap-1">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Resgatar / Encerrar
+                  </button>
+                ` : ''}
+
+                <button data-action="delete-invest" data-id="${item.id}" class="text-slate-500 hover:text-rose-400 text-xs p-1">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      // 3. Atualizar Gráfico de Investimentos por Categoria
+      updateInvestChart(activeItems);
+    }
+
+    // LISTAS DE DESPESAS E HISTÓRICO
+    function renderQuickList(monthExpenses) {
+      const container = document.getElementById('p1-quick-list');
+      const latest = monthExpenses.slice(0, 3);
 
       if (latest.length === 0) {
-        container.innerHTML = `
-          <div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-500">
-            Nenhum gasto registrado ainda. Use o formulário acima!
-          </div>`;
+        container.innerHTML = `<div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-500">Nenhum gasto neste mês.</div>`;
         return;
       }
 
       container.innerHTML = latest.map(item => {
         const cat = categoryConfig[item.category] || categoryConfig['Outros'];
-        const dateFormatted = new Date(item.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(item.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
         return `
           <div class="glass-card rounded-2xl p-3 flex justify-between items-center border border-slate-800">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl ${cat.color} flex items-center justify-center border text-sm shrink-0">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl ${cat.color} flex items-center justify-center border text-xs shrink-0">
                 <i class="fa-solid ${cat.icon}"></i>
               </div>
               <div>
                 <p class="text-xs font-bold text-white leading-tight">${escapeHTML(item.description)}</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">${dateFormatted} • ${item.category}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">${dateStr} • ${item.category}</p>
               </div>
             </div>
             <span class="text-xs font-bold text-rose-400">- ${formatCurrency(item.amount)}</span>
@@ -625,92 +1105,77 @@
       }).join('');
     }
 
-    // RENDER HISTÓRICO COMPLETO (PAGE 2)
-    function renderFullExpenses() {
-      const container = document.getElementById('full-expenses-list');
-      const searchVal = document.getElementById('search-input').value.toLowerCase();
+    function renderActiveHistoryList(monthExpenses) {
+      const container = document.getElementById('active-history-list');
+      const searchVal = (document.getElementById('search-input').value || '').toLowerCase();
 
-      let filtered = expenses.filter(item => {
-        const matchesCat = currentCategoryFilter === "Todos" || item.category === currentCategoryFilter;
+      let filtered = monthExpenses.filter(item => {
+        const matchesCat = activeCategoryFilter === "Todos" || item.category === activeCategoryFilter;
         const matchesSearch = item.description.toLowerCase().includes(searchVal);
         return matchesCat && matchesSearch;
       });
 
-      document.getElementById('total-historico-count').innerText = `${filtered.length} itens`;
+      document.getElementById('active-count-badge').innerText = `${filtered.length} itens`;
 
       if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="glass-card rounded-2xl p-8 text-center text-slate-500 space-y-2">
-            <i class="fa-solid fa-receipt text-3xl opacity-40"></i>
-            <p class="text-xs font-medium">Nenhum histórico de gasto encontrado.</p>
-          </div>`;
+        container.innerHTML = `<div class="glass-card rounded-2xl p-5 text-center text-xs text-slate-500">Nenhum gasto localizado.</div>`;
         return;
       }
 
       container.innerHTML = filtered.map(item => {
         const cat = categoryConfig[item.category] || categoryConfig['Outros'];
         const dateObj = new Date(item.createdAt);
-        const dateFormatted = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        const dateFormatted = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         const timeFormatted = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         return `
-          <div class="glass-card rounded-2xl p-3.5 flex justify-between items-center border border-slate-800 hover:border-slate-700 transition">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl ${cat.color} flex items-center justify-center border text-sm shrink-0">
+          <div class="glass-card rounded-2xl p-3 flex justify-between items-center border border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl ${cat.color} flex items-center justify-center border text-xs shrink-0">
                 <i class="fa-solid ${cat.icon}"></i>
               </div>
               <div>
                 <h4 class="text-xs font-bold text-white leading-snug">${escapeHTML(item.description)}</h4>
-                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
-                  <span>${dateFormatted} às ${timeFormatted}</span>
-                  <span>•</span>
-                  <span class="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">${item.category}</span>
-                </div>
+                <p class="text-[10px] text-slate-400">${dateFormatted} às ${timeFormatted} • <span class="text-slate-300 font-medium">${item.category}</span></p>
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
               <span class="text-xs font-extrabold text-rose-400">- ${formatCurrency(item.amount)}</span>
-              <div class="flex gap-1">
-                <button onclick="openEditModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-amber-400 text-xs transition">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-                <button onclick="deleteExpense('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs transition">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
+              <button data-action="edit-expense" data-id="${item.id}" class="p-1.5 text-slate-400 hover:text-amber-400 text-xs">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button data-action="delete-expense" data-id="${item.id}" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs">
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </div>
           </div>`;
       }).join('');
     }
 
-    // RENDER ENTRADAS (PAGE 3)
-    function renderIncomes() {
+    function renderIncomesList(monthIncomes) {
       const container = document.getElementById('incomes-list');
 
-      if (incomes.length === 0) {
-        container.innerHTML = `
-          <div class="glass-card rounded-2xl p-6 text-center text-xs text-slate-500">
-            Nenhuma renda cadastrada. Adicione seus salários acima!
-          </div>`;
+      if (monthIncomes.length === 0) {
+        container.innerHTML = `<div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-500">Nenhuma entrada cadastrada para este mês.</div>`;
         return;
       }
 
-      container.innerHTML = incomes.map(item => `
-        <div class="glass-card rounded-2xl p-3.5 flex justify-between items-center border border-slate-800">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs shrink-0">
-              <i class="fa-solid fa-wallet"></i>
+      container.innerHTML = monthIncomes.map(item => `
+        <div class="glass-card rounded-2xl p-3 flex justify-between items-center border border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-money-check-dollar"></i>
             </div>
             <div>
               <h4 class="text-xs font-bold text-white">${escapeHTML(item.title)}</h4>
-              <p class="text-[10px] text-slate-400">Renda Mensal</p>
+              <p class="text-[10px] text-slate-400">${item.isRecurring ? '🔄 Recorrente (Replicada)' : 'Entrada pontual'}</p>
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-emerald-400">+ ${formatCurrency(item.amount)}</span>
-            <button onclick="deleteIncome('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs transition">
+            <button data-action="delete-income" data-id="${item.id}" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
@@ -718,311 +1183,602 @@
       `).join('');
     }
 
-    // CHART.JS INTEGRATION (PAGE 4)
-    function initChart() {
-      const ctx = document.getElementById('categoryChart').getContext('2d');
-      chartInstance = new Chart(ctx, {
+    function renderClosedMonthsList() {
+      const container = document.getElementById('closed-months-container');
+      if (closedMonths.length === 0) {
+        container.innerHTML = `<div class="text-center p-3 text-xs text-slate-500 glass-card rounded-2xl">Nenhum mês encerrado até o momento.</div>`;
+        return;
+      }
+
+      container.innerHTML = closedMonths.map(m => `
+        <div class="glass-card rounded-2xl p-3 border border-slate-800 space-y-2">
+          <div class="flex justify-between items-center">
+            <h4 class="text-xs font-extrabold text-white">${escapeHTML(m.monthName)}</h4>
+            <span class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Fechado</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1 bg-slate-900/80 p-2 rounded-xl text-center text-xs">
+            <div><span class="text-[8px] text-slate-400 uppercase block">Renda</span><strong class="text-emerald-400 text-[11px]">${formatCurrency(m.totalIncome)}</strong></div>
+            <div><span class="text-[8px] text-slate-400 uppercase block">Gastos</span><strong class="text-rose-400 text-[11px]">${formatCurrency(m.totalExpense)}</strong></div>
+            <div><span class="text-[8px] text-slate-400 uppercase block">Saldo</span><strong class="${m.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'} text-[11px]">${formatCurrency(m.balance)}</strong></div>
+          </div>
+
+          <button data-action="view-closed-details" data-key="${m.monthKey}" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] py-1.5 rounded-xl font-semibold transition flex items-center justify-center gap-1">
+            <i class="fa-solid fa-receipt text-amber-400"></i> Ver Detalhes
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // GRÁFICOS (CHART.JS)
+    function initCharts() {
+      // 1. Expense Chart
+      const ctxExp = document.getElementById('categoryChart').getContext('2d');
+      expenseChartInstance = new Chart(ctxExp, {
         type: 'doughnut',
-        data: {
-          labels: [],
-          datasets: [{
-            data: [],
-            backgroundColor: [],
-            borderWidth: 0
-          }]
-        },
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#94a3b8',
-                font: { family: 'Inter', size: 10 },
-                padding: 12
-              }
-            }
-          },
+          plugins: { legend: { display: false } },
           cutout: '70%'
         }
       });
+
+      // 2. Investment Allocation Chart
+      const ctxInv = document.getElementById('investChart').getContext('2d');
+      investChartInstance = new Chart(ctxInv, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          cutout: '68%'
+        }
+      });
     }
 
-    function updateChart() {
-      if (!chartInstance) return;
+    function updateExpenseChart(monthExpenses) {
+      if (!expenseChartInstance) return;
 
-      const categoryTotals = {};
-      expenses.forEach(item => {
-        categoryTotals[item.category] = (categoryTotals[item.category] || 0) + Number(item.amount);
+      const totals = {};
+      monthExpenses.forEach(item => {
+        totals[item.category] = (totals[item.category] || 0) + Number(item.amount);
       });
 
-      const labels = Object.keys(categoryTotals);
-      const data = Object.values(categoryTotals);
-      const bgColors = labels.map(cat => categoryConfig[cat]?.hex || '#94a3b8');
+      const labels = Object.keys(totals);
+      const data = Object.values(totals);
+      const bgColors = labels.map(c => categoryConfig[c]?.hex || '#94a3b8');
 
-      const noDataEl = document.getElementById('no-data-chart');
-
+      const noDataEl = document.getElementById('no-chart-data');
       if (data.length === 0) {
         noDataEl.classList.remove('hidden');
-        chartInstance.data.labels = [];
-        chartInstance.data.datasets[0].data = [];
+        expenseChartInstance.data.labels = [];
+        expenseChartInstance.data.datasets[0].data = [];
       } else {
         noDataEl.classList.add('hidden');
-        chartInstance.data.labels = labels;
-        chartInstance.data.datasets[0].data = data;
-        chartInstance.data.datasets[0].backgroundColor = bgColors;
+        expenseChartInstance.data.labels = labels;
+        expenseChartInstance.data.datasets[0].data = data;
+        expenseChartInstance.data.datasets[0].backgroundColor = bgColors;
       }
-      chartInstance.update();
+      expenseChartInstance.update();
     }
 
-    // FINANCIAL DIAGNOSTIC
-    function updateDiagnostic() {
-      const totalIncomes = incomes.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-      const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    function updateInvestChart(activeInvestments) {
+      if (!investChartInstance) return;
 
-      const ratio = totalIncomes > 0 ? (totalExpenses / totalIncomes) * 100 : 0;
-      
-      const bar = document.getElementById('budget-bar');
-      const percText = document.getElementById('budget-percentage');
-      const clampedRatio = Math.min(Math.round(ratio), 100);
-      
-      bar.style.width = `${clampedRatio}%`;
-      percText.innerText = `${clampedRatio}%`;
+      const totals = {};
+      activeInvestments.forEach(item => {
+        totals[item.category] = (totals[item.category] || 0) + Number(item.amountInvested);
+      });
 
-      const titleEl = document.getElementById('diagnostic-title');
-      const bodyEl = document.getElementById('diagnostic-body');
-      const iconEl = document.getElementById('diagnostic-icon');
-      const cardEl = document.getElementById('diagnostic-card');
+      const labels = Object.keys(totals);
+      const data = Object.values(totals);
+      const bgColors = labels.map(c => investCategoryConfig[c]?.hex || '#06b6d4');
+
+      const noDataEl = document.getElementById('no-invest-chart-data');
+      if (data.length === 0) {
+        noDataEl.classList.remove('hidden');
+        investChartInstance.data.labels = [];
+        investChartInstance.data.datasets[0].data = [];
+      } else {
+        noDataEl.classList.add('hidden');
+        investChartInstance.data.labels = labels;
+        investChartInstance.data.datasets[0].data = data;
+        investChartInstance.data.datasets[0].backgroundColor = bgColors;
+      }
+      investChartInstance.update();
+    }
+
+    function updateDiagnostic(ratio, totalInc, totalExp) {
+      const titleEl = document.getElementById('p4-diagnostic-title');
+      const bodyEl = document.getElementById('p4-diagnostic-body');
+      const iconEl = document.getElementById('p4-diagnostic-icon');
+      const cardEl = document.getElementById('p4-diagnostic-card');
+
+      if (totalInc === 0 && totalExp === 0) {
+        titleEl.innerText = "Sem Lançamentos";
+        bodyEl.innerText = "Cadastre suas rendas e gastos para visualizar o diagnóstico.";
+        return;
+      }
 
       if (ratio <= 50) {
-        bar.className = "h-full bg-emerald-500 rounded-full transition-all duration-500";
-        percText.className = "font-bold text-emerald-400";
-        cardEl.className = "p-4 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 flex gap-3.5 items-start";
-        iconEl.className = "w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-base";
+        cardEl.className = "p-3.5 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 flex gap-3 items-start";
+        iconEl.className = "w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-sm";
         iconEl.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
-        titleEl.innerText = "Excelente Controle!";
-        bodyEl.innerText = "Sua taxa de comprometimento está abaixo de 50%. Excelente momento para construir reserva financeira.";
+        titleEl.innerText = "Excelente Controle";
+        bodyEl.innerText = "Você gastou menos da metade da renda neste mês. Sobrou espaço para investir!";
       } else if (ratio <= 85) {
-        bar.className = "h-full bg-amber-500 rounded-full transition-all duration-500";
-        percText.className = "font-bold text-amber-400";
-        cardEl.className = "p-4 rounded-3xl bg-amber-950/20 border border-amber-500/30 flex gap-3.5 items-start";
-        iconEl.className = "w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-base";
+        cardEl.className = "p-3.5 rounded-3xl bg-amber-950/20 border border-amber-500/30 flex gap-3 items-start";
+        iconEl.className = "w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-sm";
         iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        titleEl.innerText = "Atenção Moderada";
-        bodyEl.innerText = "Você já comprometeu mais da metade da sua renda. Evite novos gastos superficiais até o final do mês.";
+        titleEl.innerText = "Atenção aos Gastos";
+        bodyEl.innerText = "Mais de 50% da renda comprometida. Monitore suas saídas para manter aportes.";
       } else {
-        bar.className = "h-full bg-rose-500 rounded-full transition-all duration-500";
-        percText.className = "font-bold text-rose-400";
-        cardEl.className = "p-4 rounded-3xl bg-rose-950/20 border border-rose-500/30 flex gap-3.5 items-start";
-        iconEl.className = "w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-base";
+        cardEl.className = "p-3.5 rounded-3xl bg-rose-950/20 border border-rose-500/30 flex gap-3 items-start";
+        iconEl.className = "w-9 h-9 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-sm";
         iconEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
-        titleEl.innerText = "Alerta Amarelo!";
-        bodyEl.innerText = "Seus gastos ultrapassaram 85% das suas entradas! Revise suas despesas no Histórico imediatamente.";
+        titleEl.innerText = "Alerta de Limite";
+        bodyEl.innerText = "Seus gastos ultrapassaram a faixa de segurança das suas entradas mensais!";
       }
     }
 
-    // ACTIONS: ADD GASTO
-    document.getElementById('form-despesa').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const desc = document.getElementById('gasto-descricao').value.trim();
-      const val = parseFloat(document.getElementById('gasto-valor').value);
-      const cat = document.getElementById('gasto-categoria').value;
+    // EVENT LISTENERS DINÂMICOS
+    function bindEventListeners() {
+      // 1. Seletor de Mês
+      document.getElementById('prev-month-btn').addEventListener('click', () => {
+        selectedDate.setMonth(selectedDate.getMonth() - 1);
+        updateMonthLabel();
+        renderAll();
+      });
 
-      if (!desc || isNaN(val) || val <= 0) return;
+      document.getElementById('next-month-btn').addEventListener('click', () => {
+        selectedDate.setMonth(selectedDate.getMonth() + 1);
+        updateMonthLabel();
+        renderAll();
+      });
 
-      const newExpense = {
-        description: desc,
-        amount: val,
-        category: cat,
-        createdAt: new Date().toISOString()
-      };
+      document.getElementById('today-month-btn').addEventListener('click', () => {
+        selectedDate = new Date();
+        updateMonthLabel();
+        renderAll();
+      });
 
-      try {
-        if (currentUser && useFirebase) {
-          const expRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses');
-          await addDoc(expRef, newExpense);
-        } else {
-          newExpense.id = 'exp_' + Date.now();
-          expenses.unshift(newExpense);
-          saveLocalStorage();
-          renderAll();
-        }
+      // 2. Form Novo Gasto
+      document.getElementById('form-novo-gasto').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const desc = document.getElementById('gasto-descricao').value.trim();
+        const val = parseFloat(document.getElementById('gasto-valor').value);
+        const cat = document.getElementById('gasto-categoria').value;
 
-        document.getElementById('form-despesa').reset();
+        if (!desc || isNaN(val) || val <= 0) return;
+
+        const newExpense = {
+          id: 'exp_' + Date.now(),
+          monthKey: getMonthKey(selectedDate),
+          description: desc,
+          amount: val,
+          category: cat,
+          createdAt: new Date().toISOString()
+        };
+
+        expenses.unshift(newExpense);
+        saveToLocalStorage();
+        renderAll();
+        syncDocToCloud('expenses', newExpense);
+
+        document.getElementById('form-novo-gasto').reset();
         showToast("Gasto salvo com sucesso!");
-      } catch (err) {
-        console.error("Erro ao salvar gasto:", err);
-      }
-    });
+      });
 
-    // ACTIONS: ADD ENTRADA
-    document.getElementById('form-entrada').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const title = document.getElementById('entrada-nome').value.trim();
-      const val = parseFloat(document.getElementById('entrada-valor').value);
+      // 3. Form Nova Entrada
+      document.getElementById('form-entrada').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nome = document.getElementById('entrada-nome').value.trim();
+        const val = parseFloat(document.getElementById('entrada-valor').value);
+        const isRec = document.getElementById('entrada-recorrente').checked;
 
-      if (!title || isNaN(val) || val <= 0) return;
+        if (!nome || isNaN(val) || val <= 0) return;
 
-      const newIncome = {
-        title: title,
-        amount: val,
-        createdAt: new Date().toISOString()
-      };
+        const newIncome = {
+          id: 'inc_' + Date.now(),
+          monthKey: getMonthKey(selectedDate),
+          title: nome,
+          amount: val,
+          isRecurring: isRec,
+          createdAt: new Date().toISOString()
+        };
 
-      try {
-        if (currentUser && useFirebase) {
-          const incRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes');
-          await addDoc(incRef, newIncome);
-        } else {
-          newIncome.id = 'inc_' + Date.now();
-          incomes.unshift(newIncome);
-          saveLocalStorage();
-          renderAll();
-        }
+        incomes.unshift(newIncome);
+        saveToLocalStorage();
+        renderAll();
+        syncDocToCloud('incomes', newIncome);
 
         document.getElementById('form-entrada').reset();
-        showToast("Nova renda cadastrada!");
-      } catch (err) {
-        console.error("Erro ao adicionar entrada:", err);
-      }
-    });
+        showToast("Entrada salva!");
+      });
 
-    // ACTIONS: EDIT & DELETE GASTO
-    window.openEditModal = (id) => {
-      const item = expenses.find(x => x.id === id);
-      if (!item) return;
+      // 4. Form Novo Investimento (Página 5)
+      document.getElementById('form-novo-investimento').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nome = document.getElementById('invest-nome').value.trim();
+        const cat = document.getElementById('invest-categoria').value;
+        const val = parseFloat(document.getElementById('invest-valor').value);
+        const dateVal = document.getElementById('invest-data').value;
+        const notas = document.getElementById('invest-notas').value.trim();
 
-      document.getElementById('edit-gasto-id').value = item.id;
-      document.getElementById('edit-gasto-desc').value = item.description;
-      document.getElementById('edit-gasto-valor').value = item.amount;
-      document.getElementById('edit-gasto-cat').value = item.category;
+        if (!nome || isNaN(val) || val <= 0) return;
 
-      document.getElementById('modal-edit-gasto').classList.remove('hidden');
-    };
+        const newInvest = {
+          id: 'inv_' + Date.now(),
+          name: nome,
+          category: cat,
+          amountInvested: val,
+          dateInvested: dateVal || new Date().toISOString().split('T')[0],
+          notes: notas,
+          status: 'ACTIVE', // ACTIVE ou REDEEMED
+          createdAt: new Date().toISOString()
+        };
 
-    document.getElementById('form-edit-gasto').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('edit-gasto-id').value;
-      const desc = document.getElementById('edit-gasto-desc').value.trim();
-      const val = parseFloat(document.getElementById('edit-gasto-valor').value);
-      const cat = document.getElementById('edit-gasto-cat').value;
+        investments.unshift(newInvest);
+        saveToLocalStorage();
+        renderAll();
+        syncDocToCloud('investments', newInvest);
 
-      try {
-        if (currentUser && useFirebase) {
-          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses', id);
-          await updateDoc(docRef, { description: desc, amount: val, category: cat });
-        } else {
-          const idx = expenses.findIndex(x => x.id === id);
-          if (idx !== -1) {
-            expenses[idx] = { ...expenses[idx], description: desc, amount: val, category: cat };
-            saveLocalStorage();
-            renderAll();
-          }
-        }
-        closeModal('modal-edit-gasto');
-        showToast("Gasto atualizado!");
-      } catch (err) {
-        console.error("Erro ao atualizar gasto:", err);
-      }
-    });
+        document.getElementById('form-novo-investimento').reset();
+        document.getElementById('invest-data').value = new Date().toISOString().split('T')[0];
+        showToast("Aporte gravado com sucesso!");
+      });
 
-    window.deleteExpense = async (id) => {
-      try {
-        if (currentUser && useFirebase) {
-          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses', id);
-          await deleteDoc(docRef);
-        } else {
-          expenses = expenses.filter(x => x.id !== id);
-          saveLocalStorage();
+      // 5. Form Resgatar / Encerrar Investimento
+      document.getElementById('form-redeem-investment').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('redeem-invest-id').value;
+        const redeemedVal = parseFloat(document.getElementById('redeem-invest-valor').value);
+        const dateRedeemed = document.getElementById('redeem-invest-data').value;
+
+        if (isNaN(redeemedVal) || redeemedVal <= 0) return;
+
+        const idx = investments.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const item = investments[idx];
+          const profit = redeemedVal - item.amountInvested;
+          const profitPerc = item.amountInvested > 0 ? (profit / item.amountInvested) * 100 : 0;
+
+          investments[idx] = {
+            ...item,
+            status: 'REDEEMED',
+            amountRedeemed: redeemedVal,
+            dateRedeemed: dateRedeemed || new Date().toISOString().split('T')[0],
+            profitAmount: profit,
+            profitPercentage: profitPerc
+          };
+
+          saveToLocalStorage();
           renderAll();
+          syncDocToCloud('investments', investments[idx]);
+          showToast("Resgate encerrado e registrado!");
         }
-        showToast("Gasto excluído.");
-      } catch (err) {
-        console.error("Erro ao excluir gasto:", err);
-      }
-    };
 
-    window.deleteIncome = async (id) => {
-      try {
-        if (currentUser && useFirebase) {
-          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes', id);
-          await deleteDoc(docRef);
-        } else {
-          incomes = incomes.filter(x => x.id !== id);
-          saveLocalStorage();
-          renderAll();
+        document.getElementById('modal-redeem-investment').classList.add('hidden');
+      });
+
+      // Close Redeem Modal Controls
+      document.getElementById('btn-close-modal-redeem').addEventListener('click', () => {
+        document.getElementById('modal-redeem-investment').classList.add('hidden');
+      });
+      document.getElementById('btn-cancel-redeem').addEventListener('click', () => {
+        document.getElementById('modal-redeem-investment').classList.add('hidden');
+      });
+
+      // Modal Encerrar Mês Controls
+      document.getElementById('btn-open-encerrar-mes').addEventListener('click', () => {
+        const currentKey = getMonthKey(selectedDate);
+        const mExpenses = expenses.filter(e => e.monthKey === currentKey);
+        const mIncomes = incomes.filter(i => i.monthKey === currentKey);
+
+        const totalInc = mIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+        const totalExp = mExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+        const saldo = totalInc - totalExp;
+
+        document.getElementById('close-modal-month-name').innerText = getMonthNameString(selectedDate);
+        document.getElementById('close-modal-renda').innerText = formatCurrency(totalInc);
+        document.getElementById('close-modal-gastos').innerText = formatCurrency(totalExp);
+        document.getElementById('close-modal-resultado').innerText = formatCurrency(saldo);
+
+        document.getElementById('modal-encerrar-mes').classList.remove('hidden');
+      });
+
+      document.getElementById('btn-close-modal-encerrar').addEventListener('click', () => {
+        document.getElementById('modal-encerrar-mes').classList.add('hidden');
+      });
+
+      document.getElementById('btn-cancel-encerrar').addEventListener('click', () => {
+        document.getElementById('modal-encerrar-mes').classList.add('hidden');
+      });
+
+      document.getElementById('btn-confirm-encerrar').addEventListener('click', () => {
+        const currentKey = getMonthKey(selectedDate);
+        const currentName = getMonthNameString(selectedDate);
+
+        const mExpenses = expenses.filter(e => e.monthKey === currentKey);
+        const mIncomes = incomes.filter(i => i.monthKey === currentKey);
+
+        const totalInc = mIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+        const totalExp = mExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+        const saldo = totalInc - totalExp;
+
+        const repIncomes = document.getElementById('close-opt-replicate-incomes').checked;
+        const rollBalance = document.getElementById('close-opt-rollover-balance').checked;
+
+        const closedEntry = {
+          id: 'cm_' + Date.now(),
+          monthKey: currentKey,
+          monthName: currentName,
+          closedAt: new Date().toISOString(),
+          totalIncome: totalInc,
+          totalExpense: totalExp,
+          balance: saldo
+        };
+
+        closedMonths = closedMonths.filter(m => m.monthKey !== currentKey);
+        closedMonths.unshift(closedEntry);
+
+        const nextDate = new Date(selectedDate);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        const nextKey = getMonthKey(nextDate);
+
+        if (rollBalance && saldo !== 0) {
+          const rolloverInc = {
+            id: 'inc_' + Date.now(),
+            monthKey: nextKey,
+            title: `Saldo Anterior (${currentName})`,
+            amount: saldo,
+            isRecurring: false,
+            createdAt: new Date().toISOString()
+          };
+          incomes.unshift(rolloverInc);
+          syncDocToCloud('incomes', rolloverInc);
         }
-        showToast("Renda removida.");
-      } catch (err) {
-        console.error("Erro ao excluir renda:", err);
-      }
-    };
 
-    // CATEGORY BUTTON SELECTOR LOGIC
-    function setupCategoryButtons() {
-      const btns = document.querySelectorAll('.cat-btn');
-      btns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          btns.forEach(b => {
-            b.className = "cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition";
+        if (repIncomes) {
+          const recurring = mIncomes.filter(i => i.isRecurring);
+          recurring.forEach(rec => {
+            const copied = {
+              id: 'inc_' + Math.random().toString(36).substring(2, 9),
+              monthKey: nextKey,
+              title: rec.title,
+              amount: rec.amount,
+              isRecurring: true,
+              createdAt: new Date().toISOString()
+            };
+            incomes.unshift(copied);
+            syncDocToCloud('incomes', copied);
           });
-          btn.className = "cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition";
+        }
+
+        saveToLocalStorage();
+        syncDocToCloud('closed_months', closedEntry);
+
+        selectedDate = nextDate;
+        document.getElementById('modal-encerrar-mes').classList.add('hidden');
+        updateMonthLabel();
+        renderAll();
+        showToast("Mês encerrado com sucesso!");
+      });
+
+      // Modais Extras
+      document.getElementById('btn-close-modal-edit').addEventListener('click', () => {
+        document.getElementById('modal-edit-gasto').classList.add('hidden');
+      });
+      document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+        document.getElementById('modal-edit-gasto').classList.add('hidden');
+      });
+
+      document.getElementById('form-edit-gasto').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-gasto-id').value;
+        const desc = document.getElementById('edit-gasto-desc').value.trim();
+        const val = parseFloat(document.getElementById('edit-gasto-valor').value);
+        const cat = document.getElementById('edit-gasto-cat').value;
+
+        const idx = expenses.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          expenses[idx] = { ...expenses[idx], description: desc, amount: val, category: cat };
+          saveToLocalStorage();
+          renderAll();
+          syncDocToCloud('expenses', expenses[idx]);
+          showToast("Gasto atualizado!");
+        }
+        document.getElementById('modal-edit-gasto').classList.add('hidden');
+      });
+
+      document.getElementById('btn-close-modal-closed').addEventListener('click', () => {
+        document.getElementById('modal-closed-details').classList.add('hidden');
+      });
+
+      document.getElementById('accordion-toggle-btn').addEventListener('click', () => {
+        const container = document.getElementById('closed-months-container');
+        const arrow = document.getElementById('accordion-arrow');
+        container.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+      });
+
+      // Categorias de Gastos Buttons
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.cat-btn').forEach(b => {
+            b.className = "cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition";
+          });
+          btn.className = "cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition";
           document.getElementById('gasto-categoria').value = btn.dataset.cat;
         });
       });
-    }
 
-    // PILL FILTER LOGIC
-    function setupPillFilters() {
-      const pills = document.querySelectorAll('.filter-pill');
-      pills.forEach(pill => {
+      // Filter Pills para Gastos
+      document.querySelectorAll('.filter-pill').forEach(pill => {
         pill.addEventListener('click', () => {
-          pills.forEach(p => p.className = "filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700");
-          pill.className = "filter-pill active-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500 text-slate-950 font-bold";
-          currentCategoryFilter = pill.dataset.filter;
-          renderFullExpenses();
+          document.querySelectorAll('.filter-pill').forEach(p => {
+            p.className = "filter-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+          });
+          pill.className = "filter-pill active-pill shrink-0 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950";
+          activeCategoryFilter = pill.dataset.filter;
+          renderAll();
         });
       });
-    }
 
-    function setupSearchInput() {
-      document.getElementById('search-input').addEventListener('input', () => {
-        renderFullExpenses();
+      // Filter Pills para Investimentos (ALL, ACTIVE, REDEEMED)
+      document.querySelectorAll('.invest-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.querySelectorAll('.invest-pill').forEach(p => {
+            p.className = "invest-pill shrink-0 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+          });
+          pill.className = "invest-pill active-invest-pill shrink-0 px-3 py-1 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950";
+          activeInvestFilter = pill.dataset.investFilter;
+          renderInvestments();
+        });
+      });
+
+      // Input Search
+      document.getElementById('search-input').addEventListener('input', () => renderAll());
+
+      // Ir para histórico na P1
+      document.getElementById('btn-goto-history').addEventListener('click', () => goToPage(1));
+
+      // Delegated Clicks no Container de Páginas
+      document.getElementById('pages-container').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        const key = btn.dataset.key;
+
+        if (action === 'delete-expense') {
+          expenses = expenses.filter(x => x.id !== id);
+          saveToLocalStorage();
+          renderAll();
+          deleteDocFromCloud('expenses', id);
+          showToast("Gasto removido!");
+        } else if (action === 'edit-expense') {
+          const item = expenses.find(x => x.id === id);
+          if (item) {
+            document.getElementById('edit-gasto-id').value = item.id;
+            document.getElementById('edit-gasto-desc').value = item.description;
+            document.getElementById('edit-gasto-valor').value = item.amount;
+            document.getElementById('edit-gasto-cat').value = item.category;
+            document.getElementById('modal-edit-gasto').classList.remove('hidden');
+          }
+        } else if (action === 'delete-income') {
+          incomes = incomes.filter(x => x.id !== id);
+          saveToLocalStorage();
+          renderAll();
+          deleteDocFromCloud('incomes', id);
+          showToast("Entrada removida!");
+        } else if (action === 'view-closed-details') {
+          showClosedMonthDetailsModal(key);
+        } else if (action === 'redeem-invest') {
+          const item = investments.find(x => x.id === id);
+          if (item) {
+            document.getElementById('redeem-invest-id').value = item.id;
+            document.getElementById('redeem-invest-name').innerText = item.name;
+            document.getElementById('redeem-invest-original').innerText = formatCurrency(item.amountInvested);
+            document.getElementById('redeem-invest-valor').value = item.amountInvested;
+            document.getElementById('modal-redeem-investment').classList.remove('hidden');
+          }
+        } else if (action === 'delete-invest') {
+          investments = investments.filter(x => x.id !== id);
+          saveToLocalStorage();
+          renderAll();
+          deleteDocFromCloud('investments', id);
+          showToast("Investimento excluído!");
+        }
+      });
+
+      // Botões de Navegação Inferior (5 Abas)
+      for (let i = 0; i < 5; i++) {
+        document.getElementById(`nav-btn-${i}`).addEventListener('click', () => goToPage(i));
+      }
+
+      // Scroll Event Listener para Atualizar Abas no Swipe
+      const container = document.getElementById('pages-container');
+      container.addEventListener('scroll', () => {
+        const idx = Math.round(container.scrollLeft / container.clientWidth);
+        updateActiveNav(idx);
       });
     }
 
-    // NAVIGATION & SWIPE DETECTION
-    window.goToPage = (index) => {
+    // NAVEGAÇÃO ENTRE PÁGINAS
+    function goToPage(index) {
       const container = document.getElementById('pages-container');
       const pageWidth = container.clientWidth;
       container.scrollTo({ left: pageWidth * index, behavior: 'smooth' });
       updateActiveNav(index);
-    };
-
-    function setupScrollListener() {
-      const container = document.getElementById('pages-container');
-      container.addEventListener('scroll', () => {
-        const index = Math.round(container.scrollLeft / container.clientWidth);
-        updateActiveNav(index);
-      });
     }
 
     function updateActiveNav(activeIndex) {
-      const buttons = document.querySelectorAll('.nav-btn');
-      buttons.forEach((btn, idx) => {
-        if (idx === activeIndex) {
+      for (let i = 0; i < 5; i++) {
+        const btn = document.getElementById(`nav-btn-${i}`);
+        if (i === activeIndex) {
           btn.classList.add('nav-active');
         } else {
           btn.classList.remove('nav-active');
         }
-      });
+      }
     }
 
-    // UTILS
-    window.closeModal = (id) => {
-      document.getElementById(id).classList.add('hidden');
-    };
+    function showClosedMonthDetailsModal(monthKey) {
+      const closed = closedMonths.find(m => m.monthKey === monthKey);
+      if (!closed) return;
+
+      const mExpenses = expenses.filter(e => e.monthKey === monthKey);
+      const mIncomes = incomes.filter(i => i.monthKey === monthKey);
+
+      document.getElementById('closed-detail-title').innerText = `Extrato: ${closed.monthName}`;
+
+      let html = `
+        <div class="glass-card rounded-2xl p-3 border border-slate-800 grid grid-cols-3 text-center text-xs">
+          <div><span class="text-[8px] text-slate-400 block uppercase">Renda</span><strong class="text-emerald-400">${formatCurrency(closed.totalIncome)}</strong></div>
+          <div><span class="text-[8px] text-slate-400 block uppercase">Gastos</span><strong class="text-rose-400">${formatCurrency(closed.totalExpense)}</strong></div>
+          <div><span class="text-[8px] text-slate-400 block uppercase">Balanço</span><strong class="${closed.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatCurrency(closed.balance)}</strong></div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gastos Arquivados (${mExpenses.length})</h5>
+      `;
+
+      if (mExpenses.length === 0) {
+        html += `<p class="text-xs text-slate-500 py-1">Nenhum gasto registrado.</p>`;
+      } else {
+        html += mExpenses.map(item => `
+          <div class="glass-card rounded-xl p-2.5 flex justify-between items-center text-xs border border-slate-800">
+            <div>
+              <p class="font-bold text-white">${escapeHTML(item.description)}</p>
+              <p class="text-[10px] text-slate-400">${item.category}</p>
+            </div>
+            <span class="font-bold text-rose-400">- ${formatCurrency(item.amount)}</span>
+          </div>
+        `).join('');
+      }
+
+      html += `</div><div class="space-y-2 pt-2"><h5 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entradas Arquivadas (${mIncomes.length})</h5>`;
+
+      if (mIncomes.length === 0) {
+        html += `<p class="text-xs text-slate-500 py-1">Nenhuma entrada registrada.</p>`;
+      } else {
+        html += mIncomes.map(inc => `
+          <div class="glass-card rounded-xl p-2.5 flex justify-between items-center text-xs border border-slate-800">
+            <span class="font-bold text-white">${escapeHTML(inc.title)}</span>
+            <span class="font-bold text-emerald-400">+ ${formatCurrency(inc.amount)}</span>
+          </div>
+        `).join('');
+      }
+
+      html += `</div>`;
+      document.getElementById('closed-detail-body').innerHTML = html;
+      document.getElementById('modal-closed-details').classList.remove('hidden');
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -1030,17 +1786,25 @@
       toast.classList.remove('opacity-0', 'pointer-events-none');
       setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 2500);
+      }, 2200);
+    }
+
+    function updateSyncBadge(label, isOnline) {
+      const badge = document.getElementById('sync-status');
+      const text = document.getElementById('sync-text');
+      text.innerText = label;
+      if (isOnline) {
+        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0";
+      } else {
+        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0";
+      }
     }
 
     function escapeHTML(str) {
-      return str.replace(/[&<>'"]/g, 
+      return (str || '').replace(/[&<>'"]/g, 
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
       );
     }
-
-    // Initialize on ready
-    window.onload = init;
   </script>
 </body>
 </html>
