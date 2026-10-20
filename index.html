@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Despesas Pessoais - Mobile App</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              border: '#334155',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+              purple: '#8b5cf6',
+              amber: '#f59e0b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom scrollbar hiding for swipe container */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    /* Touch actions & smooth scrolling */
+    body {
+      touch-action: manipulation;
+      background-color: #0b0f19;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    /* Active nav bounce indicator */
+    .nav-active {
+      color: #10b981 !important;
+      transform: translateY(-2px);
+      transition: all 0.2s ease;
+    }
+
+    /* Custom Glassmorphism */
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card-accent {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between select-none">
+
+  <!-- TOP HEADER -->
+  <header class="w-full bg-slate-900/90 backdrop-blur-md px-5 py-3 border-b border-slate-800 flex justify-between items-center z-30 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20">
+        <i class="fa-solid font-bold fa-wallet text-sm"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-sm leading-tight text-white tracking-wide">Despesas Pessoais</h1>
+        <p class="text-[10px] text-slate-400 font-medium">Controle Financeiro</p>
+      </div>
+    </div>
+    
+    <!-- Sync Status Badge -->
+    <div id="sync-status" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span id="sync-text">Sincronizado</span>
+    </div>
+  </header>
+
+  <!-- SWIPE CONTAINER (MAIN CONTENT) -->
+  <main id="pages-container" class="w-full flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar z-10">
+    
+    <!-- ========================================== -->
+    <!-- PÁGINA 1: REGISTRAR GASTO & PAINEL         -->
+    <!-- ========================================== -->
+    <section id="page-1" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      
+      <!-- CARD RESUMO FINANCEIRO -->
+      <div class="glass-card-accent rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl"></div>
+        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Saldo Remanescente</p>
+        <h2 id="saldo-total" class="text-3xl font-extrabold tracking-tight text-white mb-4">R$ 0,00</h2>
+        
+        <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/50">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-arrow-down-left"></i>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block uppercase font-bold">Entradas</span>
+              <span id="resumo-entradas" class="text-sm font-bold text-emerald-400">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-arrow-up-right"></i>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block uppercase font-bold">Saídas</span>
+              <span id="resumo-saidas" class="text-sm font-bold text-rose-400">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO NOVO GASTO -->
+      <div class="glass-card rounded-3xl p-5 shadow-lg border border-slate-800">
+        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-circle-plus text-rose-500"></i>
+          Registrar Novo Gasto
+        </h3>
+
+        <form id="form-despesa" class="space-y-4">
+          <div>
+            <label class="block text-xs text-slate-300 font-medium mb-1.5">Descrição do Gasto</label>
+            <input type="text" id="gasto-descricao" placeholder="Ex: Supermercado, Uber, Aluguel..." required
+              class="w-full bg-slate-900/80 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-300 font-medium mb-1.5">Valor (R$)</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">R$</span>
+              <input type="number" step="0.01" min="0.01" id="gasto-valor" placeholder="0,00" required
+                class="w-full bg-slate-900/80 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl pl-11 pr-4 py-3 text-base font-bold text-white placeholder-slate-500 outline-none transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-300 font-medium mb-1.5">Categoria</label>
+            <div class="grid grid-cols-3 gap-2" id="categoria-selector">
+              <button type="button" data-cat="Alimentação" class="cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-utensils text-sm"></i>
+                Alimentação
+              </button>
+              <button type="button" data-cat="Moradia" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-house text-sm"></i>
+                Moradia
+              </button>
+              <button type="button" data-cat="Transporte" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-car text-sm"></i>
+                Transporte
+              </button>
+              <button type="button" data-cat="Lazer" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-gamepad text-sm"></i>
+                Lazer
+              </button>
+              <button type="button" data-cat="Saúde" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-heart-pulse text-sm"></i>
+                Saúde
+              </button>
+              <button type="button" data-cat="Outros" class="cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition">
+                <i class="fa-solid fa-tags text-sm"></i>
+                Outros
+              </button>
+            </div>
+            <input type="hidden" id="gasto-categoria" value="Alimentação">
+          </div>
+
+          <button type="submit" class="w-full bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-rose-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            Salvar Gasto
+          </button>
+        </form>
+      </div>
+
+      <!-- ÚLTIMOS LANÇAMENTOS RÁPIDOS -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center px-1">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Últimas Saídas</span>
+          <button onclick="goToPage(1)" class="text-xs text-emerald-400 font-semibold hover:underline">Ver tudo</button>
+        </div>
+        <div id="quick-expenses-list" class="space-y-2">
+          <!-- Injetado dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PÁGINA 2: HISTÓRICO DE GASTOS              -->
+    <!-- ========================================== -->
+    <section id="page-2" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Histórico de Gastos</h2>
+          <p class="text-xs text-slate-400">Organizados por data e hora</p>
+        </div>
+        <span id="total-historico-count" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full font-semibold border border-slate-700">0 itens</span>
+      </div>
+
+      <!-- BUSCA E FILTRO DE CATEGORIA -->
+      <div class="space-y-2">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+          <input type="text" id="search-input" placeholder="Buscar por descrição..." 
+            class="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition">
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="filter-pills">
+          <button data-filter="Todos" class="filter-pill active-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500 text-slate-950">Todos</button>
+          <button data-filter="Alimentação" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Alimentação</button>
+          <button data-filter="Moradia" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Moradia</button>
+          <button data-filter="Transporte" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Transporte</button>
+          <button data-filter="Lazer" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Lazer</button>
+          <button data-filter="Saúde" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Saúde</button>
+          <button data-filter="Outros" class="filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Outros</button>
+        </div>
+      </div>
+
+      <!-- LISTA DE HISTÓRICO COMPLETA -->
+      <div id="full-expenses-list" class="space-y-2">
+        <!-- Renderizado dinamicamente -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PÁGINA 3: ENTRADAS E RENDA                 -->
+    <!-- ========================================== -->
+    <section id="page-3" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Rendas e Entradas</h2>
+        <p class="text-xs text-slate-400">Configure seus salários e valores extras</p>
+      </div>
+
+      <!-- CARD RESUMO RENDA -->
+      <div class="glass-card rounded-3xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 to-slate-900">
+        <span class="text-xs uppercase font-semibold text-emerald-400 tracking-wider">Total de Renda Mensal</span>
+        <h3 id="total-renda-valor" class="text-3xl font-extrabold text-emerald-400 mt-1">R$ 0,00</h3>
+        <p class="text-[11px] text-slate-400 mt-1">Soma de todos os salários e aportes informados.</p>
+      </div>
+
+      <!-- FORMULÁRIO ADD ENTRADA -->
+      <div class="glass-card rounded-3xl p-5 border border-slate-800">
+        <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-money-bill-wave text-emerald-400"></i>
+          Adicionar / Cadastrar Renda
+        </h3>
+        <form id="form-entrada" class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-300 font-medium mb-1">Origem / Descrição</label>
+            <input type="text" id="entrada-nome" placeholder="Ex: Salário Principal, Freela, Venda..." required
+              class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-300 font-medium mb-1">Valor Recebido (R$)</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">R$</span>
+              <input type="number" step="0.01" min="0.01" id="entrada-valor" placeholder="0,00" required
+                class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-2xl pl-10 pr-3 py-2.5 text-sm font-bold text-white placeholder-slate-500 outline-none">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 rounded-2xl shadow-md shadow-emerald-500/20 active:scale-[0.98] transition text-xs flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus"></i>
+            Adicionar Renda
+          </button>
+        </form>
+      </div>
+
+      <!-- LISTA DE ENTRADAS CADASTRADAS -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Entradas Registradas</h4>
+        <div id="incomes-list" class="space-y-2">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PÁGINA 4: GRÁFICOS & ANALYTICS             -->
+    <!-- ========================================== -->
+    <section id="page-4" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Análise & Gráficos</h2>
+        <p class="text-xs text-slate-400">Diagnóstico inteligente dos seus hábitos</p>
+      </div>
+
+      <!-- PROGRESSO DO ORÇAMENTO -->
+      <div class="glass-card rounded-3xl p-5 border border-slate-800 space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="font-semibold text-slate-300">Uso do Orçamento Total</span>
+          <span id="budget-percentage" class="font-bold text-emerald-400">0%</span>
+        </div>
+        
+        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden p-0.5 border border-slate-800">
+          <div id="budget-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1">
+          <span>Gasto: <strong id="progresso-gasto" class="text-slate-200">R$ 0,00</strong></span>
+          <span>Renda: <strong id="progresso-renda" class="text-slate-200">R$ 0,00</strong></span>
+        </div>
+      </div>
+
+      <!-- DICA & DIAGNÓSTICO FINANCEIRO -->
+      <div id="diagnostic-card" class="p-4 rounded-3xl bg-slate-800/80 border border-slate-700 flex gap-3.5 items-start">
+        <div id="diagnostic-icon" class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-base">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <h4 id="diagnostic-title" class="text-xs font-bold text-white">Excelente Saúde Financeira!</h4>
+          <p id="diagnostic-body" class="text-[11px] text-slate-300 leading-relaxed mt-0.5">Você está usando menos da metade da sua renda. Que tal destinar uma parte do excedente para reservas ou investimentos?</p>
+        </div>
+      </div>
+
+      <!-- GRÁFICO DE PIZZA / CATEGORIAS -->
+      <div class="glass-card rounded-3xl p-5 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-purple-400"></i>
+          Gastos por Categoria
+        </h3>
+        
+        <div class="relative w-full aspect-square max-w-[240px] mx-auto flex items-center justify-center">
+          <canvas id="categoryChart"></canvas>
+          <div id="no-data-chart" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
+            <i class="fa-solid fa-chart-line text-2xl mb-2 opacity-50"></i>
+            <span>Nenhum gasto registrado para gerar o gráfico.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- NAVBAR INFERIOR FIXA -->
+  <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 z-40">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+      <button onclick="goToPage(0)" id="nav-btn-0" class="nav-btn nav-active flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-plus-circle text-lg mb-1"></i>
+        <span class="text-[10px] font-semibold">Lançar</span>
+      </button>
+
+      <button onclick="goToPage(1)" id="nav-btn-1" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
+        <span class="text-[10px] font-semibold">Histórico</span>
+      </button>
+
+      <button onclick="goToPage(2)" id="nav-btn-2" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-hand-holding-dollar text-lg mb-1"></i>
+        <span class="text-[10px] font-semibold">Entradas</span>
+      </button>
+
+      <button onclick="goToPage(3)" id="nav-btn-3" class="nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-chart-line text-lg mb-1"></i>
+        <span class="text-[10px] font-semibold">Análises</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL DE EDIÇÃO DE GASTO -->
+  <div id="modal-edit-gasto" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+          Editar Gasto
+        </h3>
+        <button onclick="closeModal('modal-edit-gasto')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-edit-gasto" class="space-y-3">
+        <input type="hidden" id="edit-gasto-id">
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1">Descrição</label>
+          <input type="text" id="edit-gasto-desc" required
+            class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1">Valor (R$)</label>
+          <input type="number" step="0.01" min="0.01" id="edit-gasto-valor" required
+            class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white font-bold outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1">Categoria</label>
+          <select id="edit-gasto-cat" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white outline-none">
+            <option value="Alimentação">Alimentação</option>
+            <option value="Moradia">Moradia</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Lazer">Lazer</option>
+            <option value="Saúde">Saúde</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeModal('modal-edit-gasto')" class="w-1/2 py-2.5 rounded-2xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="w-1/2 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20">Salvar Alteração</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST FEEDBACK FLOATING -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-emerald-500/40 text-white px-4 py-2.5 rounded-full text-xs font-medium shadow-2xl flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-message">Operação realizada!</span>
+  </div>
+
+  <!-- FIREBASE ENGINE & APP LOGIC -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Configuration provided by user
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqoV83sZcjRrd845-x3FSe07EgUwWjyrM",
+      authDomain: "despesaspess.firebaseapp.com",
+      projectId: "despesaspess",
+      storageBucket: "despesaspess.firebasestorage.app",
+      messagingSenderId: "521330705661",
+      appId: "1:521330705661:web:fe4408ed3a4d7d99d0aa94",
+      measurementId: "G-98ZK2BZK3H"
+    };
+
+    // State Variables
+    let app, db, auth;
+    let currentUser = null;
+    let expenses = [];
+    let incomes = [];
+    let currentCategoryFilter = "Todos";
+    let chartInstance = null;
+    let useFirebase = true;
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'despesas-pessoais-app';
+
+    // Category Styling Dictionary
+    const categoryConfig = {
+      'Alimentação': { icon: 'fa-utensils', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30', hex: '#f59e0b' },
+      'Moradia': { icon: 'fa-house', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', hex: '#3b82f6' },
+      'Transporte': { icon: 'fa-car', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30', hex: '#6366f1' },
+      'Lazer': { icon: 'fa-gamepad', color: 'bg-purple-500/15 text-purple-400 border-purple-500/30', hex: '#a855f7' },
+      'Saúde': { icon: 'fa-heart-pulse', color: 'bg-rose-500/15 text-rose-400 border-rose-500/30', hex: '#f43f5e' },
+      'Outros': { icon: 'fa-tags', color: 'bg-slate-500/15 text-slate-400 border-slate-500/30', hex: '#94a3b8' }
+    };
+
+    // Formatter
+    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+
+    // Initializer
+    async function init() {
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            currentUser = user;
+            setupFirestoreListeners();
+          } else {
+            await signInAnonymously(auth);
+          }
+        });
+      } catch (err) {
+        console.warn("Firebase fallback active (LocalStorage mode):", err);
+        useFirebase = false;
+        updateSyncBadge(false);
+        loadLocalStorage();
+      }
+
+      setupCategoryButtons();
+      setupPillFilters();
+      setupSearchInput();
+      setupScrollListener();
+      initChart();
+    }
+
+    function updateSyncBadge(online) {
+      const badge = document.getElementById('sync-status');
+      const text = document.getElementById('sync-text');
+      if (online) {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        text.innerText = "Sincronizado";
+      } else {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20";
+        text.innerText = "Modo Local";
+      }
+    }
+
+    // FIRESTORE LISTENERS
+    function setupFirestoreListeners() {
+      if (!currentUser) return;
+
+      // Expenses Collection Path (Rule 1 Compliant)
+      const expensesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses');
+      onSnapshot(expensesRef, (snapshot) => {
+        expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Client-side sort descending by date (Rule 2 Compliant)
+        expenses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderAll();
+      }, (err) => {
+        console.error("Firestore Expense Error:", err);
+        loadLocalStorage();
+      });
+
+      // Incomes Collection Path
+      const incomesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes');
+      onSnapshot(incomesRef, (snapshot) => {
+        incomes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        incomes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderAll();
+      }, (err) => {
+        console.error("Firestore Income Error:", err);
+        loadLocalStorage();
+      });
+    }
+
+    // LOCALSTORAGE FALLBACK
+    function loadLocalStorage() {
+      const expStored = localStorage.getItem('dp_expenses');
+      const incStored = localStorage.getItem('dp_incomes');
+
+      expenses = expStored ? JSON.parse(expStored) : [];
+      incomes = incStored ? JSON.parse(incStored) : [
+        { id: 'inc_1', title: 'Salário 1', amount: 3000, createdAt: new Date().toISOString() }
+      ];
+      renderAll();
+    }
+
+    function saveLocalStorage() {
+      localStorage.setItem('dp_expenses', JSON.stringify(expenses));
+      localStorage.setItem('dp_incomes', JSON.stringify(incomes));
+    }
+
+    // UI RENDER PIPELINE
+    function renderAll() {
+      calculateTotals();
+      renderQuickExpenses();
+      renderFullExpenses();
+      renderIncomes();
+      updateChart();
+      updateDiagnostic();
+    }
+
+    // CALCULATIONS & RESUMO
+    function calculateTotals() {
+      const totalIncomes = incomes.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      const saldo = totalIncomes - totalExpenses;
+
+      document.getElementById('resumo-entradas').innerText = formatCurrency(totalIncomes);
+      document.getElementById('resumo-saidas').innerText = formatCurrency(totalExpenses);
+      
+      const saldoEl = document.getElementById('saldo-total');
+      saldoEl.innerText = formatCurrency(saldo);
+      saldoEl.className = `text-3xl font-extrabold tracking-tight mb-4 ${saldo >= 0 ? 'text-white' : 'text-rose-400'}`;
+
+      document.getElementById('total-renda-valor').innerText = formatCurrency(totalIncomes);
+      document.getElementById('progresso-gasto').innerText = formatCurrency(totalExpenses);
+      document.getElementById('progresso-renda').innerText = formatCurrency(totalIncomes);
+    }
+
+    // RENDER QUICK EXPENSES (PAGE 1)
+    function renderQuickExpenses() {
+      const container = document.getElementById('quick-expenses-list');
+      const latest = expenses.slice(0, 3);
+
+      if (latest.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-500">
+            Nenhum gasto registrado ainda. Use o formulário acima!
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = latest.map(item => {
+        const cat = categoryConfig[item.category] || categoryConfig['Outros'];
+        const dateFormatted = new Date(item.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <div class="glass-card rounded-2xl p-3 flex justify-between items-center border border-slate-800">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl ${cat.color} flex items-center justify-center border text-sm shrink-0">
+                <i class="fa-solid ${cat.icon}"></i>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-white leading-tight">${escapeHTML(item.description)}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">${dateFormatted} • ${item.category}</p>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-rose-400">- ${formatCurrency(item.amount)}</span>
+          </div>`;
+      }).join('');
+    }
+
+    // RENDER HISTÓRICO COMPLETO (PAGE 2)
+    function renderFullExpenses() {
+      const container = document.getElementById('full-expenses-list');
+      const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+      let filtered = expenses.filter(item => {
+        const matchesCat = currentCategoryFilter === "Todos" || item.category === currentCategoryFilter;
+        const matchesSearch = item.description.toLowerCase().includes(searchVal);
+        return matchesCat && matchesSearch;
+      });
+
+      document.getElementById('total-historico-count').innerText = `${filtered.length} itens`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center text-slate-500 space-y-2">
+            <i class="fa-solid fa-receipt text-3xl opacity-40"></i>
+            <p class="text-xs font-medium">Nenhum histórico de gasto encontrado.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const cat = categoryConfig[item.category] || categoryConfig['Outros'];
+        const dateObj = new Date(item.createdAt);
+        const dateFormatted = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        const timeFormatted = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <div class="glass-card rounded-2xl p-3.5 flex justify-between items-center border border-slate-800 hover:border-slate-700 transition">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl ${cat.color} flex items-center justify-center border text-sm shrink-0">
+                <i class="fa-solid ${cat.icon}"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white leading-snug">${escapeHTML(item.description)}</h4>
+                <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                  <span>${dateFormatted} às ${timeFormatted}</span>
+                  <span>•</span>
+                  <span class="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">${item.category}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-extrabold text-rose-400">- ${formatCurrency(item.amount)}</span>
+              <div class="flex gap-1">
+                <button onclick="openEditModal('${item.id}')" class="p-1.5 text-slate-400 hover:text-amber-400 text-xs transition">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button onclick="deleteExpense('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs transition">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // RENDER ENTRADAS (PAGE 3)
+    function renderIncomes() {
+      const container = document.getElementById('incomes-list');
+
+      if (incomes.length === 0) {
+        container.innerHTML = `
+          <div class="glass-card rounded-2xl p-6 text-center text-xs text-slate-500">
+            Nenhuma renda cadastrada. Adicione seus salários acima!
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = incomes.map(item => `
+        <div class="glass-card rounded-2xl p-3.5 flex justify-between items-center border border-slate-800">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">${escapeHTML(item.title)}</h4>
+              <p class="text-[10px] text-slate-400">Renda Mensal</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-emerald-400">+ ${formatCurrency(item.amount)}</span>
+            <button onclick="deleteIncome('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 text-xs transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // CHART.JS INTEGRATION (PAGE 4)
+    function initChart() {
+      const ctx = document.getElementById('categoryChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            backgroundColor: [],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#94a3b8',
+                font: { family: 'Inter', size: 10 },
+                padding: 12
+              }
+            }
+          },
+          cutout: '70%'
+        }
+      });
+    }
+
+    function updateChart() {
+      if (!chartInstance) return;
+
+      const categoryTotals = {};
+      expenses.forEach(item => {
+        categoryTotals[item.category] = (categoryTotals[item.category] || 0) + Number(item.amount);
+      });
+
+      const labels = Object.keys(categoryTotals);
+      const data = Object.values(categoryTotals);
+      const bgColors = labels.map(cat => categoryConfig[cat]?.hex || '#94a3b8');
+
+      const noDataEl = document.getElementById('no-data-chart');
+
+      if (data.length === 0) {
+        noDataEl.classList.remove('hidden');
+        chartInstance.data.labels = [];
+        chartInstance.data.datasets[0].data = [];
+      } else {
+        noDataEl.classList.add('hidden');
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = data;
+        chartInstance.data.datasets[0].backgroundColor = bgColors;
+      }
+      chartInstance.update();
+    }
+
+    // FINANCIAL DIAGNOSTIC
+    function updateDiagnostic() {
+      const totalIncomes = incomes.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+      const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+      const ratio = totalIncomes > 0 ? (totalExpenses / totalIncomes) * 100 : 0;
+      
+      const bar = document.getElementById('budget-bar');
+      const percText = document.getElementById('budget-percentage');
+      const clampedRatio = Math.min(Math.round(ratio), 100);
+      
+      bar.style.width = `${clampedRatio}%`;
+      percText.innerText = `${clampedRatio}%`;
+
+      const titleEl = document.getElementById('diagnostic-title');
+      const bodyEl = document.getElementById('diagnostic-body');
+      const iconEl = document.getElementById('diagnostic-icon');
+      const cardEl = document.getElementById('diagnostic-card');
+
+      if (ratio <= 50) {
+        bar.className = "h-full bg-emerald-500 rounded-full transition-all duration-500";
+        percText.className = "font-bold text-emerald-400";
+        cardEl.className = "p-4 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 flex gap-3.5 items-start";
+        iconEl.className = "w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-base";
+        iconEl.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
+        titleEl.innerText = "Excelente Controle!";
+        bodyEl.innerText = "Sua taxa de comprometimento está abaixo de 50%. Excelente momento para construir reserva financeira.";
+      } else if (ratio <= 85) {
+        bar.className = "h-full bg-amber-500 rounded-full transition-all duration-500";
+        percText.className = "font-bold text-amber-400";
+        cardEl.className = "p-4 rounded-3xl bg-amber-950/20 border border-amber-500/30 flex gap-3.5 items-start";
+        iconEl.className = "w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 text-base";
+        iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        titleEl.innerText = "Atenção Moderada";
+        bodyEl.innerText = "Você já comprometeu mais da metade da sua renda. Evite novos gastos superficiais até o final do mês.";
+      } else {
+        bar.className = "h-full bg-rose-500 rounded-full transition-all duration-500";
+        percText.className = "font-bold text-rose-400";
+        cardEl.className = "p-4 rounded-3xl bg-rose-950/20 border border-rose-500/30 flex gap-3.5 items-start";
+        iconEl.className = "w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-base";
+        iconEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+        titleEl.innerText = "Alerta Amarelo!";
+        bodyEl.innerText = "Seus gastos ultrapassaram 85% das suas entradas! Revise suas despesas no Histórico imediatamente.";
+      }
+    }
+
+    // ACTIONS: ADD GASTO
+    document.getElementById('form-despesa').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const desc = document.getElementById('gasto-descricao').value.trim();
+      const val = parseFloat(document.getElementById('gasto-valor').value);
+      const cat = document.getElementById('gasto-categoria').value;
+
+      if (!desc || isNaN(val) || val <= 0) return;
+
+      const newExpense = {
+        description: desc,
+        amount: val,
+        category: cat,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        if (currentUser && useFirebase) {
+          const expRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses');
+          await addDoc(expRef, newExpense);
+        } else {
+          newExpense.id = 'exp_' + Date.now();
+          expenses.unshift(newExpense);
+          saveLocalStorage();
+          renderAll();
+        }
+
+        document.getElementById('form-despesa').reset();
+        showToast("Gasto salvo com sucesso!");
+      } catch (err) {
+        console.error("Erro ao salvar gasto:", err);
+      }
+    });
+
+    // ACTIONS: ADD ENTRADA
+    document.getElementById('form-entrada').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('entrada-nome').value.trim();
+      const val = parseFloat(document.getElementById('entrada-valor').value);
+
+      if (!title || isNaN(val) || val <= 0) return;
+
+      const newIncome = {
+        title: title,
+        amount: val,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        if (currentUser && useFirebase) {
+          const incRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes');
+          await addDoc(incRef, newIncome);
+        } else {
+          newIncome.id = 'inc_' + Date.now();
+          incomes.unshift(newIncome);
+          saveLocalStorage();
+          renderAll();
+        }
+
+        document.getElementById('form-entrada').reset();
+        showToast("Nova renda cadastrada!");
+      } catch (err) {
+        console.error("Erro ao adicionar entrada:", err);
+      }
+    });
+
+    // ACTIONS: EDIT & DELETE GASTO
+    window.openEditModal = (id) => {
+      const item = expenses.find(x => x.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-gasto-id').value = item.id;
+      document.getElementById('edit-gasto-desc').value = item.description;
+      document.getElementById('edit-gasto-valor').value = item.amount;
+      document.getElementById('edit-gasto-cat').value = item.category;
+
+      document.getElementById('modal-edit-gasto').classList.remove('hidden');
+    };
+
+    document.getElementById('form-edit-gasto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-gasto-id').value;
+      const desc = document.getElementById('edit-gasto-desc').value.trim();
+      const val = parseFloat(document.getElementById('edit-gasto-valor').value);
+      const cat = document.getElementById('edit-gasto-cat').value;
+
+      try {
+        if (currentUser && useFirebase) {
+          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses', id);
+          await updateDoc(docRef, { description: desc, amount: val, category: cat });
+        } else {
+          const idx = expenses.findIndex(x => x.id === id);
+          if (idx !== -1) {
+            expenses[idx] = { ...expenses[idx], description: desc, amount: val, category: cat };
+            saveLocalStorage();
+            renderAll();
+          }
+        }
+        closeModal('modal-edit-gasto');
+        showToast("Gasto atualizado!");
+      } catch (err) {
+        console.error("Erro ao atualizar gasto:", err);
+      }
+    });
+
+    window.deleteExpense = async (id) => {
+      try {
+        if (currentUser && useFirebase) {
+          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'expenses', id);
+          await deleteDoc(docRef);
+        } else {
+          expenses = expenses.filter(x => x.id !== id);
+          saveLocalStorage();
+          renderAll();
+        }
+        showToast("Gasto excluído.");
+      } catch (err) {
+        console.error("Erro ao excluir gasto:", err);
+      }
+    };
+
+    window.deleteIncome = async (id) => {
+      try {
+        if (currentUser && useFirebase) {
+          const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'incomes', id);
+          await deleteDoc(docRef);
+        } else {
+          incomes = incomes.filter(x => x.id !== id);
+          saveLocalStorage();
+          renderAll();
+        }
+        showToast("Renda removida.");
+      } catch (err) {
+        console.error("Erro ao excluir renda:", err);
+      }
+    };
+
+    // CATEGORY BUTTON SELECTOR LOGIC
+    function setupCategoryButtons() {
+      const btns = document.querySelectorAll('.cat-btn');
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          btns.forEach(b => {
+            b.className = "cat-btn border border-slate-700 bg-slate-900/60 text-slate-400 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition";
+          });
+          btn.className = "cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2.5 flex flex-col items-center gap-1 text-xs font-medium transition";
+          document.getElementById('gasto-categoria').value = btn.dataset.cat;
+        });
+      });
+    }
+
+    // PILL FILTER LOGIC
+    function setupPillFilters() {
+      const pills = document.querySelectorAll('.filter-pill');
+      pills.forEach(pill => {
+        pill.addEventListener('click', () => {
+          pills.forEach(p => p.className = "filter-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700");
+          pill.className = "filter-pill active-pill shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500 text-slate-950 font-bold";
+          currentCategoryFilter = pill.dataset.filter;
+          renderFullExpenses();
+        });
+      });
+    }
+
+    function setupSearchInput() {
+      document.getElementById('search-input').addEventListener('input', () => {
+        renderFullExpenses();
+      });
+    }
+
+    // NAVIGATION & SWIPE DETECTION
+    window.goToPage = (index) => {
+      const container = document.getElementById('pages-container');
+      const pageWidth = container.clientWidth;
+      container.scrollTo({ left: pageWidth * index, behavior: 'smooth' });
+      updateActiveNav(index);
+    };
+
+    function setupScrollListener() {
+      const container = document.getElementById('pages-container');
+      container.addEventListener('scroll', () => {
+        const index = Math.round(container.scrollLeft / container.clientWidth);
+        updateActiveNav(index);
+      });
+    }
+
+    function updateActiveNav(activeIndex) {
+      const buttons = document.querySelectorAll('.nav-btn');
+      buttons.forEach((btn, idx) => {
+        if (idx === activeIndex) {
+          btn.classList.add('nav-active');
+        } else {
+          btn.classList.remove('nav-active');
+        }
+      });
+    }
+
+    // UTILS
+    window.closeModal = (id) => {
+      document.getElementById(id).classList.add('hidden');
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // Initialize on ready
+    window.onload = init;
+  </script>
+</body>
+</html>
