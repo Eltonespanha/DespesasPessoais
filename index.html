@@ -96,7 +96,7 @@
 </head>
 <body class="h-screen w-screen flex flex-col justify-between overflow-hidden">
 
-  <!-- HEADER FIXO COM NAVEGAÇÃO DE MÊS -->
+  <!-- HEADER FIXO COM SELETOR DE MÊS -->
   <header class="w-full bg-slate-900/95 backdrop-blur-md px-3 py-2.5 border-b border-slate-800/80 flex justify-between items-center z-30 shrink-0">
     <!-- Seletor de Mês (< Mês/Ano >) -->
     <div class="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-2xl border border-slate-800">
@@ -128,13 +128,13 @@
     </div>
   </header>
 
-  <!-- SLIDER HORIZONTAL DE PÁGINAS (5 PÁGINAS) -->
+  <!-- SLIDER HORIZONTAL DE PÁGINAS (5 PÁGINAS SWIPABLE) -->
   <main id="pages-container" class="w-full flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar z-10">
 
     <!-- ========================================== -->
     <!-- PÁGINA 1: GASTAR                           -->
     <!-- ========================================== -->
-    <section id="page-1" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+    <section id="page-1" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       
       <!-- CARD HERO DE BALANÇO MENSAL -->
       <div class="glass-card-hero rounded-3xl p-5 shadow-2xl relative overflow-hidden">
@@ -243,7 +243,7 @@
     <!-- ========================================== -->
     <!-- PÁGINA 2: HISTÓRICO & FECHAMENTOS          -->
     <!-- ========================================== -->
-    <section id="page-2" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+    <section id="page-2" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       
       <!-- BANNER ENCERRAMENTO DE MÊS -->
       <div class="glass-card rounded-3xl p-4 border border-amber-500/30 bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 flex justify-between items-center">
@@ -312,7 +312,7 @@
     <!-- ========================================== -->
     <!-- PÁGINA 3: ENTRADAS E RENDA                 -->
     <!-- ========================================== -->
-    <section id="page-3" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+    <section id="page-3" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       <div>
         <h2 class="text-lg font-extrabold text-white">Entradas & Renda</h2>
         <p class="text-xs text-slate-400">Cadastre seus salários e receitas no mês selecionado</p>
@@ -372,12 +372,12 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- PÁGINA 4: DASHBOARD & GRÁFICOS             -->
+    <!-- PÁGINA 4: DASHBOARD & GRÁFICOS (EM BARRAS) -->
     <!-- ========================================== -->
-    <section id="page-4" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+    <section id="page-4" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       <div>
         <h2 class="text-lg font-extrabold text-white">Dashboard & Gráficos</h2>
-        <p class="text-xs text-slate-400">Análise de despesas no mês selecionado</p>
+        <p class="text-xs text-slate-400">Análise de despesas e receitas no mês selecionado</p>
       </div>
 
       <!-- PROGRESSO DO ORÇAMENTO -->
@@ -426,19 +426,31 @@
         </div>
       </div>
 
-      <!-- GRÁFICO DESPESAS POR CATEGORIA -->
-      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-2">
+      <!-- GRÁFICO 1: BARRAS HORIZONTAIS DE DESPESAS POR CATEGORIA -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
         <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <i class="fa-solid fa-chart-pie text-purple-400"></i>
-          Gastos por Categoria
+          <i class="fa-solid fa-chart-bar text-purple-400"></i>
+          Gastos por Categoria (Barras)
         </h3>
 
-        <div class="relative w-full aspect-square max-w-[200px] mx-auto flex items-center justify-center">
+        <div class="relative w-full h-52 flex items-center justify-center">
           <canvas id="categoryChart"></canvas>
           <div id="no-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
-            <i class="fa-solid fa-chart-line text-xl mb-1 opacity-40"></i>
+            <i class="fa-solid fa-chart-simple text-2xl mb-1 opacity-40"></i>
             <span>Sem gastos neste mês.</span>
           </div>
+        </div>
+      </div>
+
+      <!-- GRÁFICO 2: BARRAS COMPARATIVAS ENTRADAS VS SAÍDAS -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-scale-balanced text-emerald-400"></i>
+          Comparativo Entradas vs Saídas
+        </h3>
+
+        <div class="relative w-full h-48 flex items-center justify-center">
+          <canvas id="comparisonChart"></canvas>
         </div>
       </div>
     </section>
@@ -446,7 +458,7 @@
     <!-- ========================================== -->
     <!-- PÁGINA 5: INVESTIMENTOS (CONTÍNUO / VITALÍCIO) -->
     <!-- ========================================== -->
-    <section id="page-5" class="w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
+    <section id="page-5" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       <div class="flex justify-between items-center">
         <div>
           <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
@@ -539,17 +551,17 @@
         </form>
       </div>
 
-      <!-- ALOCAÇÃO DE PATRIMÔNIO (GRÁFICO DE APORTES) -->
-      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-2">
+      <!-- ALOCAÇÃO DE PATRIMÔNIO (GRÁFICO DE BARRAS VERTICAIS) -->
+      <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
         <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <i class="fa-solid fa-chart-pie text-cyan-400"></i>
-          Distribuição dos Ativos
+          <i class="fa-solid fa-chart-column text-cyan-400"></i>
+          Alocação de Ativos (Barras)
         </h3>
 
-        <div class="relative w-full aspect-square max-w-[190px] mx-auto flex items-center justify-center">
+        <div class="relative w-full h-48 flex items-center justify-center">
           <canvas id="investChart"></canvas>
           <div id="no-invest-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs text-center p-4">
-            <i class="fa-solid fa-vault text-xl mb-1 opacity-40"></i>
+            <i class="fa-solid fa-vault text-2xl mb-1 opacity-40"></i>
             <span>Nenhum ativo em carteira.</span>
           </div>
         </div>
@@ -571,8 +583,8 @@
 
   </main>
 
-  <!-- BOTTOM NAVBAR FIXA (5 ÍCONES) -->
-  <nav class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-1.5 z-40">
+  <!-- BOTTOM NAVBAR FIXA (AUTO-HIDE NO SCROLL) -->
+  <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-1.5 z-40 transition-transform duration-300">
     <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
       <button id="nav-btn-0" class="nav-btn nav-active flex flex-col items-center py-1 rounded-2xl text-slate-400 hover:text-slate-200 transition">
         <i class="fa-solid fa-plus-circle text-base mb-0.5"></i>
@@ -799,7 +811,8 @@
     let activeCategoryFilter = "Todos";
     let activeInvestFilter = "ALL"; // ALL, ACTIVE, REDEEMED
 
-    let expenseChartInstance = null;
+    let categoryChartInstance = null;
+    let comparisonChartInstance = null;
     let investChartInstance = null;
 
     // Config de Categorias de Despesas
@@ -844,7 +857,6 @@
 
     // Inicialização
     document.addEventListener('DOMContentLoaded', () => {
-      // Set default date input for investments to today
       const todayIso = new Date().toISOString().split('T')[0];
       document.getElementById('invest-data').value = todayIso;
       document.getElementById('redeem-invest-data').value = todayIso;
@@ -864,6 +876,7 @@
       initCharts();
       renderAll();
       bindEventListeners();
+      initAutoHideBottomNav();
     });
 
     // LOCAL STORAGE SYNC
@@ -925,6 +938,28 @@
       document.getElementById('close-banner-title').innerText = label;
     }
 
+    // AUTO-HIDE BOTTOM NAV ON SCROLL
+    function initAutoHideBottomNav() {
+      const nav = document.getElementById('bottom-nav');
+      const pageSections = document.querySelectorAll('.page-section');
+
+      pageSections.forEach(section => {
+        let lastScrollTop = 0;
+        section.addEventListener('scroll', () => {
+          const currentScrollTop = section.scrollTop;
+          
+          if (currentScrollTop > lastScrollTop && currentScrollTop > 40) {
+            // Scroll para baixo: esconde menu
+            nav.classList.add('translate-y-full');
+          } else {
+            // Scroll para cima: mostra menu
+            nav.classList.remove('translate-y-full');
+          }
+          lastScrollTop = Math.max(0, currentScrollTop);
+        });
+      });
+    }
+
     // RENDERIZADOR MASTER
     function renderAll() {
       const currentKey = getMonthKey(selectedDate);
@@ -968,7 +1003,7 @@
       renderActiveHistoryList(monthExpenses);
       renderIncomesList(monthIncomes);
       renderClosedMonthsList();
-      updateExpenseChart(monthExpenses);
+      updateExpenseCharts(monthExpenses, totalInc, totalExp);
       updateDiagnostic(ratio, totalInc, totalExp);
 
       // Render PÁGINA 5 (INVESTIMENTOS CONTÍNUOS)
@@ -977,7 +1012,6 @@
 
     // PÁGINA 5: RENDERIZADOR DE INVESTIMENTOS
     function renderInvestments() {
-      // 1. Cálculos do Patrimônio Vitalício
       const activeItems = investments.filter(i => i.status === 'ACTIVE');
       const redeemedItems = investments.filter(i => i.status === 'REDEEMED');
 
@@ -992,7 +1026,6 @@
       lucroEl.innerText = formatCurrency(lucroRealizadoTotal);
       lucroEl.className = `text-xs font-bold ${lucroRealizadoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
-      // 2. Filtrar lista de investimentos
       let filtered = investments;
       if (activeInvestFilter === 'ACTIVE') {
         filtered = activeItems;
@@ -1071,7 +1104,6 @@
         }).join('');
       }
 
-      // 3. Atualizar Gráfico de Investimentos por Categoria
       updateInvestChart(activeItems);
     }
 
@@ -1210,38 +1242,70 @@
       `).join('');
     }
 
-    // GRÁFICOS (CHART.JS)
+    // GRÁFICOS (CHART.JS - APENAS GRÁFICOS DE BARRAS)
     function initCharts() {
-      // 1. Expense Chart
-      const ctxExp = document.getElementById('categoryChart').getContext('2d');
-      expenseChartInstance = new Chart(ctxExp, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+      // 1. Horizontal Bar Chart: Despesas por Categoria
+      const ctxCat = document.getElementById('categoryChart').getContext('2d');
+      categoryChartInstance = new Chart(ctxCat, {
+        type: 'bar',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 8 }] },
         options: {
+          indexAxis: 'y', // Torna o gráfico de barras horizontal
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          cutout: '70%'
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            y: { ticks: { color: '#f8fafc', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+          }
         }
       });
 
-      // 2. Investment Allocation Chart
-      const ctxInv = document.getElementById('investChart').getContext('2d');
-      investChartInstance = new Chart(ctxInv, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+      // 2. Comparison Bar Chart: Entradas vs Saídas
+      const ctxComp = document.getElementById('comparisonChart').getContext('2d');
+      comparisonChartInstance = new Chart(ctxComp, {
+        type: 'bar',
+        data: {
+          labels: ['Entradas', 'Saídas'],
+          datasets: [{
+            data: [0, 0],
+            backgroundColor: ['#10b981', '#f43f5e'],
+            borderRadius: 10,
+            barThickness: 32
+          }]
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          cutout: '68%'
+          scales: {
+            x: { ticks: { color: '#f8fafc', font: { size: 11, weight: 'bold' } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
+        }
+      });
+
+      // 3. Vertical Bar Chart: Alocação de Investimentos
+      const ctxInv = document.getElementById('investChart').getContext('2d');
+      investChartInstance = new Chart(ctxInv, {
+        type: 'bar',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 8 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#f8fafc', font: { size: 9, weight: 'bold' } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
         }
       });
     }
 
-    function updateExpenseChart(monthExpenses) {
-      if (!expenseChartInstance) return;
+    function updateExpenseCharts(monthExpenses, totalInc, totalExp) {
+      if (!categoryChartInstance || !comparisonChartInstance) return;
 
+      // 1. Atualizar Barras de Categorias
       const totals = {};
       monthExpenses.forEach(item => {
         totals[item.category] = (totals[item.category] || 0) + Number(item.amount);
@@ -1254,15 +1318,19 @@
       const noDataEl = document.getElementById('no-chart-data');
       if (data.length === 0) {
         noDataEl.classList.remove('hidden');
-        expenseChartInstance.data.labels = [];
-        expenseChartInstance.data.datasets[0].data = [];
+        categoryChartInstance.data.labels = [];
+        categoryChartInstance.data.datasets[0].data = [];
       } else {
         noDataEl.classList.add('hidden');
-        expenseChartInstance.data.labels = labels;
-        expenseChartInstance.data.datasets[0].data = data;
-        expenseChartInstance.data.datasets[0].backgroundColor = bgColors;
+        categoryChartInstance.data.labels = labels;
+        categoryChartInstance.data.datasets[0].data = data;
+        categoryChartInstance.data.datasets[0].backgroundColor = bgColors;
       }
-      expenseChartInstance.update();
+      categoryChartInstance.update();
+
+      // 2. Atualizar Barras Comparativas
+      comparisonChartInstance.data.datasets[0].data = [totalInc, totalExp];
+      comparisonChartInstance.update();
     }
 
     function updateInvestChart(activeInvestments) {
@@ -1417,7 +1485,7 @@
           amountInvested: val,
           dateInvested: dateVal || new Date().toISOString().split('T')[0],
           notes: notas,
-          status: 'ACTIVE', // ACTIVE ou REDEEMED
+          status: 'ACTIVE',
           createdAt: new Date().toISOString()
         };
 
@@ -1464,7 +1532,7 @@
         document.getElementById('modal-redeem-investment').classList.add('hidden');
       });
 
-      // Close Redeem Modal Controls
+      // Modais Controls
       document.getElementById('btn-close-modal-redeem').addEventListener('click', () => {
         document.getElementById('modal-redeem-investment').classList.add('hidden');
       });
@@ -1472,7 +1540,6 @@
         document.getElementById('modal-redeem-investment').classList.add('hidden');
       });
 
-      // Modal Encerrar Mês Controls
       document.getElementById('btn-open-encerrar-mes').addEventListener('click', () => {
         const currentKey = getMonthKey(selectedDate);
         const mExpenses = expenses.filter(e => e.monthKey === currentKey);
@@ -1568,7 +1635,6 @@
         showToast("Mês encerrado com sucesso!");
       });
 
-      // Modais Extras
       document.getElementById('btn-close-modal-edit').addEventListener('click', () => {
         document.getElementById('modal-edit-gasto').classList.add('hidden');
       });
@@ -1605,7 +1671,6 @@
         arrow.classList.toggle('rotate-180');
       });
 
-      // Categorias de Gastos Buttons
       document.querySelectorAll('.cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.cat-btn').forEach(b => {
@@ -1616,7 +1681,6 @@
         });
       });
 
-      // Filter Pills para Gastos
       document.querySelectorAll('.filter-pill').forEach(pill => {
         pill.addEventListener('click', () => {
           document.querySelectorAll('.filter-pill').forEach(p => {
@@ -1628,7 +1692,6 @@
         });
       });
 
-      // Filter Pills para Investimentos (ALL, ACTIVE, REDEEMED)
       document.querySelectorAll('.invest-pill').forEach(pill => {
         pill.addEventListener('click', () => {
           document.querySelectorAll('.invest-pill').forEach(p => {
@@ -1640,13 +1703,10 @@
         });
       });
 
-      // Input Search
       document.getElementById('search-input').addEventListener('input', () => renderAll());
-
-      // Ir para histórico na P1
       document.getElementById('btn-goto-history').addEventListener('click', () => goToPage(1));
 
-      // Delegated Clicks no Container de Páginas
+      // Delegated Clicks
       document.getElementById('pages-container').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
@@ -1696,12 +1756,12 @@
         }
       });
 
-      // Botões de Navegação Inferior (5 Abas)
+      // Bottom Nav Buttons
       for (let i = 0; i < 5; i++) {
         document.getElementById(`nav-btn-${i}`).addEventListener('click', () => goToPage(i));
       }
 
-      // Scroll Event Listener para Atualizar Abas no Swipe
+      // Scroll Listener para Sync da Bottom Nav
       const container = document.getElementById('pages-container');
       container.addEventListener('scroll', () => {
         const idx = Math.round(container.scrollLeft / container.clientWidth);
