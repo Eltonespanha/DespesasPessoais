@@ -872,6 +872,11 @@
       return isNaN(d) ? '---' : d.toLocaleDateString('pt-BR');
     };
 
+    // Sanitizar objetos antes do envio para o Firestore (remove propriedades 'undefined')
+    function sanitizeForFirestore(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
     // Inicialização
     document.addEventListener('DOMContentLoaded', () => {
       const todayIso = new Date().toISOString().split('T')[0];
@@ -924,51 +929,44 @@
       onSnapshot(collection(db, "expenses"), (snapshot) => {
         const cloudData = [];
         snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
-        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
-          expenses = cloudData;
-          saveToLocalStorage();
-          renderAll();
-        }
+        expenses = cloudData;
+        saveToLocalStorage();
+        renderAll();
       }, (err) => console.warn("Erro realtime expenses:", err));
 
-      // 2. Escutar Entradas
+      // 2. Escutar Entradas (Salários / Receitas)
       onSnapshot(collection(db, "incomes"), (snapshot) => {
         const cloudData = [];
         snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
-        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
-          incomes = cloudData;
-          saveToLocalStorage();
-          renderAll();
-        }
+        incomes = cloudData;
+        saveToLocalStorage();
+        renderAll();
       }, (err) => console.warn("Erro realtime incomes:", err));
 
       // 3. Escutar Meses Fechados
       onSnapshot(collection(db, "closed_months"), (snapshot) => {
         const cloudData = [];
         snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
-        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
-          closedMonths = cloudData;
-          saveToLocalStorage();
-          renderAll();
-        }
+        closedMonths = cloudData;
+        saveToLocalStorage();
+        renderAll();
       }, (err) => console.warn("Erro realtime closed_months:", err));
 
-      // 4. Escutar Investimentos
+      // 4. Escutar Investimentos (Vitalícios)
       onSnapshot(collection(db, "investments"), (snapshot) => {
         const cloudData = [];
         snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
-        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
-          investments = cloudData;
-          saveToLocalStorage();
-          renderAll();
-        }
+        investments = cloudData;
+        saveToLocalStorage();
+        renderAll();
       }, (err) => console.warn("Erro realtime investments:", err));
     }
 
     async function syncDocToCloud(collectionName, item) {
       if (!db) return;
       try {
-        await setDoc(doc(db, collectionName, item.id), item);
+        const cleanItem = sanitizeForFirestore(item);
+        await setDoc(doc(db, collectionName, cleanItem.id), cleanItem);
       } catch (err) {
         console.warn(`Sincronização em nuvem (${collectionName}) pendente localmente:`, err);
       }
@@ -983,13 +981,30 @@
       }
     }
 
+    // FILTRAGEM INTELIGENTE DE ENTRADAS PARA O MÊS SELECIONADO
+    function getIncomesForMonth(targetKey) {
+      // 1. Entradas cadastradas diretamente para o targetKey
+      const exactIncomes = incomes.filter(i => i.monthKey === targetKey);
+      const exactTitles = new Set(exactIncomes.map(i => (i.title || '').trim().toLowerCase()));
+
+      // 2. Entradas recorrentes criadas em meses anteriores que ainda não foram substituídas neste mês
+      const recurringIncomes = incomes.filter(i => {
+        if (!i.isRecurring) return false;
+        if (i.monthKey >= targetKey) return false;
+        const titleLower = (i.title || '').trim().toLowerCase();
+        return !exactTitles.has(titleLower);
+      });
+
+      return [...exactIncomes, ...recurringIncomes];
+    }
+
     // EXTRAIR RELATÓRIO (.TXT)
     function exportTxtReport() {
       const currentKey = getMonthKey(selectedDate);
       const monthName = getMonthNameString(selectedDate);
 
       const monthExpenses = expenses.filter(e => e.monthKey === currentKey);
-      const monthIncomes = incomes.filter(i => i.monthKey === currentKey);
+      const monthIncomes = getIncomesForMonth(currentKey);
 
       const totalInc = monthIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
       const totalExp = monthExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
@@ -1141,7 +1156,7 @@
 
       // Despesas e Entradas por mês
       const monthExpenses = expenses.filter(e => e.monthKey === currentKey);
-      const monthIncomes = incomes.filter(i => i.monthKey === currentKey);
+      const monthIncomes = getIncomesForMonth(currentKey);
 
       const totalInc = monthIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
       const totalExp = monthExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
@@ -1662,7 +1677,7 @@
           category: cat,
           amountInvested: val,
           dateInvested: dateVal || new Date().toISOString().split('T')[0],
-          notes: notas,
+          notes: notas || '',
           status: 'ACTIVE',
           createdAt: new Date().toISOString()
         };
@@ -1721,7 +1736,7 @@
       document.getElementById('btn-open-encerrar-mes').addEventListener('click', () => {
         const currentKey = getMonthKey(selectedDate);
         const mExpenses = expenses.filter(e => e.monthKey === currentKey);
-        const mIncomes = incomes.filter(i => i.monthKey === currentKey);
+        const mIncomes = getIncomesForMonth(currentKey);
 
         const totalInc = mIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
         const totalExp = mExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
@@ -1748,7 +1763,7 @@
         const currentName = getMonthNameString(selectedDate);
 
         const mExpenses = expenses.filter(e => e.monthKey === currentKey);
-        const mIncomes = incomes.filter(i => i.monthKey === currentKey);
+        const mIncomes = getIncomesForMonth(currentKey);
 
         const totalInc = mIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
         const totalExp = mExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
@@ -1971,7 +1986,7 @@
       if (!closed) return;
 
       const mExpenses = expenses.filter(e => e.monthKey === monthKey);
-      const mIncomes = incomes.filter(i => i.monthKey === monthKey);
+      const mIncomes = getIncomesForMonth(monthKey);
 
       document.getElementById('closed-detail-title').innerText = `Extrato: ${closed.monthName}`;
 
