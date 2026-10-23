@@ -114,8 +114,8 @@
       </button>
     </div>
 
-    <!-- Status do Banco / Botão Mês Atual -->
-    <div class="flex items-center gap-2">
+    <!-- Status do Banco / Botões de Ação -->
+    <div class="flex items-center gap-1.5">
       <button id="today-month-btn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-2.5 py-1.5 rounded-xl border border-slate-700 active:scale-95 transition flex items-center gap-1">
         <i class="fa-solid fa-calendar-day text-emerald-400"></i>
         <span>Mês Atual</span>
@@ -123,7 +123,7 @@
 
       <div id="sync-status" class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="sync-text">Pronto</span>
+        <span id="sync-text">Conectando...</span>
       </div>
     </div>
   </header>
@@ -197,7 +197,7 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-2">Categoria</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-2">Categoria / Setor</label>
             <div class="grid grid-cols-3 gap-2" id="categoria-selector">
               <button type="button" data-cat="Alimentação" class="cat-btn active border border-emerald-500 bg-emerald-500/20 text-emerald-300 rounded-2xl p-2 flex flex-col items-center gap-1 text-[11px] font-medium transition">
                 <i class="fa-solid fa-utensils text-xs"></i> Alimentação
@@ -245,6 +245,23 @@
     <!-- ========================================== -->
     <section id="page-2" class="page-section w-full h-full flex-shrink-0 snap-center overflow-y-auto px-4 py-4 pb-24 space-y-4">
       
+      <!-- BOTÃO DE EXTRAÇÃO DE RELATÓRIO DESTACADO -->
+      <div class="glass-card rounded-3xl p-4 border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/30 shrink-0">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-white">Extrair Relatório (.TXT)</h3>
+            <p class="text-[10px] text-slate-400">Gere o extrato com gastos, total e divisão por setor</p>
+          </div>
+        </div>
+        <button id="btn-export-txt-page2" class="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs px-3.5 py-2.5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-[0.95] transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i>
+          Extrair
+        </button>
+      </div>
+
       <!-- BANNER ENCERRAMENTO DE MÊS -->
       <div class="glass-card rounded-3xl p-4 border border-amber-500/30 bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 flex justify-between items-center">
         <div>
@@ -430,7 +447,7 @@
       <div class="glass-card rounded-3xl p-4 border border-slate-800 space-y-3">
         <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
           <i class="fa-solid fa-chart-bar text-purple-400"></i>
-          Gastos por Categoria (Barras)
+          Gastos por Categoria / Setor
         </h3>
 
         <div class="relative w-full h-52 flex items-center justify-center">
@@ -740,7 +757,7 @@
         </div>
 
         <div>
-          <label class="block text-xs text-slate-300 font-medium mb-1">Categoria</label>
+          <label class="block text-xs text-slate-300 font-medium mb-1">Categoria / Setor</label>
           <select id="edit-gasto-cat" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-white outline-none">
             <option value="Alimentação">Alimentação</option>
             <option value="Moradia">Moradia</option>
@@ -787,7 +804,7 @@
   <!-- FIREBASE & LÓGICA JAVASCRIPT -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // Firebase Configuração
     const firebaseConfig = {
@@ -867,6 +884,7 @@
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         updateSyncBadge("Online", true);
+        initRealtimeSync();
       } catch (err) {
         console.warn("Firebase offline ou com falha. Operando via LocalStorage:", err);
         updateSyncBadge("Modo Local", false);
@@ -898,7 +916,55 @@
       localStorage.setItem('dp_investments', JSON.stringify(investments));
     }
 
-    // CLOUD SYNC FIRESTORE
+    // CLOUD REALTIME SYNC (FIRESTORE)
+    function initRealtimeSync() {
+      if (!db) return;
+
+      // 1. Escutar Despesas
+      onSnapshot(collection(db, "expenses"), (snapshot) => {
+        const cloudData = [];
+        snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
+        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
+          expenses = cloudData;
+          saveToLocalStorage();
+          renderAll();
+        }
+      }, (err) => console.warn("Erro realtime expenses:", err));
+
+      // 2. Escutar Entradas
+      onSnapshot(collection(db, "incomes"), (snapshot) => {
+        const cloudData = [];
+        snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
+        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
+          incomes = cloudData;
+          saveToLocalStorage();
+          renderAll();
+        }
+      }, (err) => console.warn("Erro realtime incomes:", err));
+
+      // 3. Escutar Meses Fechados
+      onSnapshot(collection(db, "closed_months"), (snapshot) => {
+        const cloudData = [];
+        snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
+        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
+          closedMonths = cloudData;
+          saveToLocalStorage();
+          renderAll();
+        }
+      }, (err) => console.warn("Erro realtime closed_months:", err));
+
+      // 4. Escutar Investimentos
+      onSnapshot(collection(db, "investments"), (snapshot) => {
+        const cloudData = [];
+        snapshot.forEach((docSnap) => cloudData.push(docSnap.data()));
+        if (snapshot.docChanges().length > 0 || cloudData.length > 0) {
+          investments = cloudData;
+          saveToLocalStorage();
+          renderAll();
+        }
+      }, (err) => console.warn("Erro realtime investments:", err));
+    }
+
     async function syncDocToCloud(collectionName, item) {
       if (!db) return;
       try {
@@ -915,6 +981,117 @@
       } catch (err) {
         console.warn(`Exclusão na nuvem (${collectionName}) pendente:`, err);
       }
+    }
+
+    // EXTRAIR RELATÓRIO (.TXT)
+    function exportTxtReport() {
+      const currentKey = getMonthKey(selectedDate);
+      const monthName = getMonthNameString(selectedDate);
+
+      const monthExpenses = expenses.filter(e => e.monthKey === currentKey);
+      const monthIncomes = incomes.filter(i => i.monthKey === currentKey);
+
+      const totalInc = monthIncomes.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+      const totalExp = monthExpenses.reduce((acc, c) => acc + Number(c.amount || 0), 0);
+      const saldo = totalInc - totalExp;
+
+      // Calcular totais por Setor / Categoria
+      const categoryTotals = {};
+      monthExpenses.forEach(e => {
+        const cat = e.category || 'Outros';
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(e.amount || 0);
+      });
+
+      let txt = `==================================================
+`;
+      txt += `         RELATÓRIO FINANCEIRO MENSAL              
+`;
+      txt += `==================================================
+`;
+      txt += `Mês de Referência: ${monthName} (${currentKey})
+`;
+      txt += `Data da Extração:  ${new Date().toLocaleString('pt-BR')}
+`;
+      txt += `--------------------------------------------------
+
+`;
+
+      txt += `--- RESUMO MENSAL ---
+`;
+      txt += `(+) Total de Rendas / Entradas : R$ ${totalInc.toFixed(2).replace('.', ',')}
+`;
+      txt += `(-) Total de Gastos / Saídas   : R$ ${totalExp.toFixed(2).replace('.', ',')}
+`;
+      txt += `(=) Saldo Final do Mês        : R$ ${saldo.toFixed(2).replace('.', ',')}
+
+`;
+
+      txt += `--- TOTAL POR SETOR / CATEGORIA ---
+`;
+      if (Object.keys(categoryTotals).length === 0) {
+        txt += `Nenhum gasto registrado neste mês.
+`;
+      } else {
+        for (const [cat, val] of Object.entries(categoryTotals)) {
+          const perc = totalExp > 0 ? ((val / totalExp) * 100).toFixed(1) : '0.0';
+          txt += `• ${cat.padEnd(16, ' ')} : R$ ${val.toFixed(2).replace('.', ',').padStart(10, ' ')}  (${perc}%)
+`;
+        }
+      }
+      txt += `
+`;
+
+      txt += `--- DETALHAMENTO DE GASTOS (${monthExpenses.length} itens) ---
+`;
+      txt += `DATA       | CATEGORIA        | VALOR (R$)   | DESCRIÇÃO
+`;
+      txt += `------------------------------------------------------------------
+`;
+      if (monthExpenses.length === 0) {
+        txt += `Nenhum gasto cadastrado.
+`;
+      } else {
+        monthExpenses.forEach(e => {
+          const dateFormatted = new Date(e.createdAt).toLocaleDateString('pt-BR');
+          const valFormatted = Number(e.amount).toFixed(2).replace('.', ',');
+          txt += `${dateFormatted} | ${e.category.padEnd(16, ' ')} | R$ ${valFormatted.padStart(9, ' ')} | ${e.description}
+`;
+        });
+      }
+      txt += `
+`;
+
+      txt += `--- DETALHAMENTO DE ENTRADAS (${monthIncomes.length} itens) ---
+`;
+      txt += `ORIGEM / DESCRIÇÃO                    | VALOR (R$)
+`;
+      txt += `--------------------------------------------------
+`;
+      if (monthIncomes.length === 0) {
+        txt += `Nenhuma entrada cadastrada.
+`;
+      } else {
+        monthIncomes.forEach(i => {
+          const valFormatted = Number(i.amount).toFixed(2).replace('.', ',');
+          txt += `${i.title.padEnd(37, ' ')} | R$ ${valFormatted.padStart(9, ' ')}
+`;
+        });
+      }
+      txt += `
+==================================================
+`;
+
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Relatorio_Financeiro_${currentKey}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast("Relatório .TXT gerado com sucesso!");
     }
 
     // MÊS ATUALIZAÇÃO
@@ -949,10 +1126,8 @@
           const currentScrollTop = section.scrollTop;
           
           if (currentScrollTop > lastScrollTop && currentScrollTop > 40) {
-            // Scroll para baixo: esconde menu
             nav.classList.add('translate-y-full');
           } else {
-            // Scroll para cima: mostra menu
             nav.classList.remove('translate-y-full');
           }
           lastScrollTop = Math.max(0, currentScrollTop);
@@ -1250,7 +1425,7 @@
         type: 'bar',
         data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 8 }] },
         options: {
-          indexAxis: 'y', // Torna o gráfico de barras horizontal
+          indexAxis: 'y', // Horizontal
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
@@ -1394,6 +1569,9 @@
 
     // EVENT LISTENERS DINÂMICOS
     function bindEventListeners() {
+      // Botão Extrair Relatório .TXT
+      document.getElementById('btn-export-txt-page2').addEventListener('click', exportTxtReport);
+
       // 1. Seletor de Mês
       document.getElementById('prev-month-btn').addEventListener('click', () => {
         selectedDate.setMonth(selectedDate.getMonth() - 1);
